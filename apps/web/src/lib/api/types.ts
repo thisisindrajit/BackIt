@@ -1,0 +1,23 @@
+import type { components } from "./schema";
+
+type S = components["schemas"];
+export type PublicConfig = S["PublicConfig"];
+export type Me = S["Me"];
+export type Profile = S["ProfileOut"];
+export type Product = S["ProductOut"];
+export type ProductCreated = S["ProductCreated"];
+export type Campaign = S["CampaignOut"];
+export type CampaignDraft = S["CampaignDraft"];
+export type Readiness = S["Readiness"];
+export type Verification = S["VerificationOut"];
+export type PublicCampaign = S["PublicCampaign"];
+export type LedgerPage = S["LedgerPage"];
+export type LedgerItem = S["LedgerItem"];
+export type Order = S["OrderOut"];
+export type Backing = S["BackingOut"];
+export type ShareDrafts = S["ShareDraftsOut"];
+export type SalesSummary = S["SalesSummary"];
+export type WebhookDelivery = S["WebhookDeliveryOut"];
+export type RiskFlag = S["RiskFlagOut"];
+export type PayoutPreview = S["PayoutPreviewOut"];
+export type PayoutBatch = S["PayoutBatchOut"];

@@ -1,0 +1,323 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-timeless-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-timeless-serif), ui-serif, Georgia, serif;
+  --font-heading: var(--font-timeless-serif), ui-serif, Georgia, serif;
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-deep: var(--primary-deep);
+  --shadow-soft: 0 1px 2px rgb(27 35 28 / 0.04), 0 6px 20px -10px rgb(27 35 28 / 0.12);
+  --shadow-lift: 0 2px 4px rgb(27 35 28 / 0.04), 0 18px 40px -16px rgb(27 35 28 / 0.22);
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-link: var(--link);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+  --background: #ffffff;
+  --foreground: #1b231c;
+  --card: #ffffff;
+  --card-foreground: #1b231c;
+  --popover: #ffffff;
+  --popover-foreground: #1b231c;
+  --primary: #83a281;
+  --primary-foreground: #ffffff;
+  --primary-hover: #739371;
+  --primary-deep: #4f6d4d;
+  --secondary: #c7d3c0;
+  --secondary-foreground: #1b231c;
+  --muted: #f3f5f1;
+  --muted-foreground: #5b665a;
+  --accent: #fff9d6;
+  --accent-foreground: #3d3a1e;
+  --destructive: #b42318;
+  --success: #3f6b3d;
+  --warning: #fff9d6;
+  --warning-foreground: #5c4a06;
+  --link: #4f6d4d;
+  --border: #e6eae3;
+  --input: #dbe1d7;
+  --ring: #83a281;
+  --chart-1: #83a281;
+  --chart-2: #c7d3c0;
+  --chart-3: #4f6d4d;
+  --chart-4: #fff9d6;
+  --chart-5: #1b231c;
+  --radius: 0.75rem;
+  --sidebar: #f5f7f3;
+  --sidebar-foreground: #1b231c;
+  --sidebar-primary: #83a281;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #e9efe5;
+  --sidebar-accent-foreground: #1b231c;
+  --sidebar-border: #e6eae3;
+  --sidebar-ring: #83a281;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+    font-variation-settings: "STYL" 100;
+  }
+  /* Timeless Serif: display cut for large headings, text cut for small ones. */
+  h1, h2, .font-display {
+    font-family: var(--font-serif);
+    font-variation-settings: "STYL" 0;
+    font-weight: 400;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+  h3, h4, .font-heading {
+    font-family: var(--font-serif);
+    font-variation-settings: "STYL" 100;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+  :is(h1, h2, h3, .font-display) em {
+    font-style: italic;
+    color: var(--primary-deep);
+  }
+  p {
+    text-wrap: pretty;
+  }
+  .tabular {
+    font-variant-numeric: tabular-nums lining-nums;
+  }
+  ::selection {
+    background: var(--secondary);
+  }
+}
+
+/* Motion: entrances ease out from nearly visible; reduced motion keeps fades only. */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+    filter: blur(4px);
+  }
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.85) rotate(-14deg);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.04) rotate(3deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+@keyframes spin-slow {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes ticker {
+  to {
+    transform: translateY(-50%);
+  }
+}
+
+@keyframes float {
+  50% {
+    transform: translateY(-10px) rotate(var(--tilt, 0deg));
+  }
+}
+
+@keyframes grow-x {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+@keyframes confetti {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) rotate(0deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--dx), var(--dy)) rotate(var(--r));
+  }
+}
+
+/* One page container so the header, sections and footer share the same edges. */
+@utility page-shell {
+  margin-inline: auto;
+  width: 100%;
+  max-width: var(--container-6xl);
+  padding-inline: calc(var(--spacing) * 5);
+  @media (width >= 40rem) {
+    padding-inline: calc(var(--spacing) * 8);
+  }
+}
+
+@utility rise {
+  animation: rise 480ms var(--ease-out) both;
+}
+
+/* Page sections enter in sequence: small and quick, since pages are visited often. */
+@utility stagger {
+  & > * {
+    animation: rise 380ms var(--ease-out) both;
+  }
+  & > :nth-child(2) {
+    animation-delay: 50ms;
+  }
+  & > :nth-child(3) {
+    animation-delay: 100ms;
+  }
+  & > :nth-child(4) {
+    animation-delay: 150ms;
+  }
+  & > :nth-child(n + 5) {
+    animation-delay: 200ms;
+  }
+}
+
+@utility pop-in {
+  animation: pop 640ms var(--ease-out) both;
+}
+
+@utility spin-slow {
+  animation: spin-slow 40s linear infinite;
+}
+
+/* Gentle bob for decorative floating chips. Set --tilt for a resting angle. */
+@utility float {
+  transform: rotate(var(--tilt, 0deg));
+  animation: float 5s cubic-bezier(0.37, 0, 0.63, 1) infinite;
+}
+
+@utility ticker {
+  animation: ticker 28s linear infinite;
+}
+
+@utility press {
+  transition-property: transform, background-color, color, box-shadow, border-color;
+  transition-duration: 160ms;
+  transition-timing-function: var(--ease-out);
+  &:active {
+    transform: scale(0.97);
+  }
+}
+
+/* Interactive rows and cards lift on hover, fine pointers only. */
+@utility lift {
+  transition-property: transform, box-shadow, background-color, border-color;
+  transition-duration: 200ms;
+  transition-timing-function: var(--ease-out);
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-lift);
+    }
+  }
+}
+
+/* Marketing-only scroll reveals; content stays visible where unsupported. */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .reveal {
+      animation: rise linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 70%;
+    }
+    .reveal-grow {
+      transform-origin: left;
+      animation: grow-x linear both;
+      animation-timeline: view();
+      animation-range: entry 30% cover 50%;
+    }
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .ticker-pause:hover .ticker {
+    animation-play-state: paused;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rise,
+  .stagger > *,
+  .pop-in {
+    animation-name: fade;
+  }
+  .spin-slow,
+  .float,
+  .ticker,
+  .confetti-piece {
+    animation: none !important;
+  }
+  .confetti-piece {
+    display: none;
+  }
+  .press:active,
+  .lift:hover {
+    transform: none;
+  }
+}

@@ -1,0 +1,32 @@
+# OS / editors
+.DS_Store
+.idea/
+.vscode/
+
+# Env and secrets
+.env
+.env.*
+!.env.example
+*.pem
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+.vercel
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+
+# Local databases
+*.db
+*.sqlite3
+
+# Licensed fonts: the Timeless license forbids redistribution, so keep them out of the repo.
+apps/web/src/fonts/*.ttf
+apps/web/src/fonts/*.pdf
