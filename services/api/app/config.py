@@ -3,6 +3,7 @@ from typing import Literal
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from sqlalchemy.engine import URL
 
 PAYPAL_SANDBOX_API_BASE = "https://api-m.sandbox.paypal.com"
 DEV_ENCRYPTION_SEED = "backit-development-only-key-do-not-use-in-production"
@@ -12,7 +13,10 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     environment: Literal["development", "production"] = "development"
-    database_url: str = "postgresql+psycopg://indrajit@localhost:5432/backit"
+    db_server: str = "localhost:5432"
+    db_username: str = "indrajit"
+    db_password: str | None = None
+    db_name: str = "backit"
     cors_origins: str = "http://localhost:3000"
     web_base_url: str = "http://localhost:3000"
 
@@ -46,6 +50,20 @@ class Settings(BaseSettings):
     webhook_timeout_seconds: float = 5.0
     webhook_response_max_bytes: int = 4096
     job_max_attempts: int = 6
+
+    @property
+    def database_url(self) -> URL:
+        host, _, port = self.db_server.partition(":")
+        local = host in ("localhost", "127.0.0.1")
+        return URL.create(
+            "postgresql+psycopg",
+            username=self.db_username,
+            password=self.db_password or None,
+            host=host,
+            port=int(port) if port else 5432,
+            database=self.db_name,
+            query={} if local else {"sslmode": "require"},
+        )
 
     @property
     def cors_origin_list(self) -> list[str]:

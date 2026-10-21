@@ -5,10 +5,18 @@ import { Pool } from "pg";
 
 const baseURL = process.env.BETTER_AUTH_URL ?? "http://localhost:3000";
 
+const [dbHost, dbPort] = (process.env.DB_SERVER ?? "localhost").split(":");
+const isLocalDb = ["localhost", "127.0.0.1"].includes(dbHost);
+
 export const auth = betterAuth({
   baseURL,
   database: new Pool({
-    connectionString: process.env.AUTH_DATABASE_URL,
+    host: dbHost,
+    port: Number(dbPort ?? 5432),
+    user: process.env.DB_USERNAME,
+    password: process.env.DB_PASSWORD || undefined,
+    database: process.env.DB_NAME,
+    ssl: isLocalDb ? false : { rejectUnauthorized: true },
     options: "-c search_path=auth",
   }),
   socialProviders: {

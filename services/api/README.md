@@ -27,7 +27,7 @@ uv run ruff check .
 ```
 
 Tests sign their own EdDSA JWTs through a dependency override and capture outgoing webhooks, so no network access is needed.
-Set `TEST_DATABASE_URL` to use a different test database.
+Set `TEST_DB_SERVER`, `TEST_DB_USERNAME`, `TEST_DB_PASSWORD` or `TEST_DB_NAME` to use a different test database.
 
 ## Modes
 

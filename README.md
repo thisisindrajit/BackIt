@@ -90,7 +90,8 @@ The defaults run in mock mode. Set these for sandbox and production paths:
 | `OPENROUTER_API_KEY`, `OPENROUTER_MODEL` | `services/api/.env` | AI drafts. Without them, the API falls back to templates. |
 | `APP_ENCRYPTION_KEY` | `services/api/.env` | Encrypts webhook secrets at rest |
 | `AUTH_JWKS_URL`, `AUTH_ISSUER` | `services/api/.env` | Verifies Better Auth JWTs |
-| `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `AUTH_DATABASE_URL` | `apps/web/.env.local` | Auth |
+| `DB_SERVER`, `DB_USERNAME`, `DB_PASSWORD`, `DB_NAME` | `services/api/.env` and `apps/web/.env.local` | Shared Postgres for app data and auth (`DB_SERVER` is `host` or `host:port`) |
+| `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL` | `apps/web/.env.local` | Auth |
 | `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_DEMO_PRODUCT_URL` | `apps/web/.env.local` | API and demo product URLs |
 
 ## Checks

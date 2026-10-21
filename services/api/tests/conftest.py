@@ -1,9 +1,10 @@
 import os
 
 # Configure the app for tests BEFORE any app module is imported.
-os.environ["DATABASE_URL"] = os.environ.get(
-    "TEST_DATABASE_URL", "postgresql+psycopg://indrajit@localhost:5432/backit_test"
-)
+os.environ["DB_SERVER"] = os.environ.get("TEST_DB_SERVER", "localhost:5432")
+os.environ["DB_USERNAME"] = os.environ.get("TEST_DB_USERNAME", "indrajit")
+os.environ["DB_PASSWORD"] = os.environ.get("TEST_DB_PASSWORD", "")
+os.environ["DB_NAME"] = os.environ.get("TEST_DB_NAME", "backit_test")
 os.environ["ENVIRONMENT"] = "development"
 os.environ["PAYPAL_MODE"] = "mock"
 os.environ["OPENROUTER_API_KEY"] = ""
@@ -59,7 +60,6 @@ def _schema() -> Iterator[None]:
         conn.execute(text("CREATE SCHEMA app"))
     cfg = Config(str(ROOT / "alembic.ini"))
     cfg.set_main_option("script_location", str(ROOT / "migrations"))
-    cfg.set_main_option("sqlalchemy.url", os.environ["DATABASE_URL"])
     cfg.attributes["configure_logger"] = False
     command.upgrade(cfg, "head")
     yield
