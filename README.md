@@ -19,7 +19,7 @@ Backing is a purchase, not an investment. There is no equity and no revenue shar
 - Postgres 16
 - [uv](https://docs.astral.sh/uv/)
 - Node 24
-- The Timeless Sans variable font (`TimelessSansVF.ttf`). Its license forbids redistribution, so it is gitignored. Copy your licensed file to `apps/web/src/fonts/TimelessSansVF.ttf` before building.
+- The Timeless fonts (`TimelessSerifVF.ttf`, `TimelessSerifItalicVF.ttf`, `TimelessSansVF.ttf`). Their license forbids public repos, so they are gitignored. Locally, copy them into `apps/web/src/fonts/`. On Vercel, `npm run build` runs `scripts/fetch-fonts.mjs` first, which downloads any missing font from a private Vercel Blob store using `FONTS_BASE_URL` and `BLOB_READ_WRITE_TOKEN`.
 
 ## Local setup
 
