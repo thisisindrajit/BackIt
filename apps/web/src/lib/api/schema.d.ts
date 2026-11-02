@@ -39,6 +39,26 @@ export interface paths {
         patch: operations["update_me_v1_me_patch"];
         trace?: never;
     };
+    "/v1/me/activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Activity
+         * @description Weekly money in and out: sales of your campaigns, rewards you earned, rewards you paid.
+         */
+        get: operations["get_activity_v1_me_activity_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/me/backings": {
         parameters: {
             query?: never;
@@ -279,6 +299,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/public/campaigns": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Public Campaigns */
+        get: operations["list_public_campaigns_v1_public_campaigns_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/public/campaigns/{slug}": {
         parameters: {
             query?: never;
@@ -466,6 +503,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/claims/redeem": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Redeem
+         * @description Server-to-server: the builder's backend redeems a backer's one-time code.
+         *
+         *     Authenticate with `Authorization: Bearer <product webhook secret>`.
+         */
+        post: operations["redeem_v1_claims_redeem_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/products/{product_id}/payout-previews": {
         parameters: {
             query?: never;
@@ -594,6 +653,32 @@ export interface components {
             /** Received */
             received: boolean;
         };
+        /** Activity */
+        Activity: {
+            /** Weeks */
+            weeks: components["schemas"]["ActivityWeek"][];
+            totals: components["schemas"]["ActivityTotals"];
+        };
+        /** ActivityTotals */
+        ActivityTotals: {
+            /** Sales Cents */
+            sales_cents: number;
+            /** Earned Cents */
+            earned_cents: number;
+            /** Sent Cents */
+            sent_cents: number;
+        };
+        /** ActivityWeek */
+        ActivityWeek: {
+            /** Week */
+            week: string;
+            /** Sales Cents */
+            sales_cents: number;
+            /** Earned Cents */
+            earned_cents: number;
+            /** Sent Cents */
+            sent_cents: number;
+        };
         /** ApproveIn */
         ApproveIn: {
             /** Digest */
@@ -611,6 +696,10 @@ export interface components {
             headline: string;
             /** Product Name */
             product_name: string;
+            /** Product Url */
+            product_url: string;
+            /** Builder Name */
+            builder_name: string;
         };
         /** BackingOut */
         BackingOut: {
@@ -628,6 +717,15 @@ export interface components {
             referral_code: string;
             /** Share Url */
             share_url: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "active" | "revoked";
+            /** Claim Code */
+            claim_code: string;
+            /** Claimed At */
+            claimed_at: string | null;
             balances: components["schemas"]["Balances"];
             /** Commissions */
             commissions: components["schemas"]["CommissionOut"][];
@@ -642,6 +740,10 @@ export interface components {
             campaign_slug: string;
             /** Campaign Headline */
             campaign_headline: string;
+            /** Product Name */
+            product_name: string;
+            /** Builder Name */
+            builder_name: string;
             /** Badge Number */
             badge_number: number | null;
             /**
@@ -649,6 +751,12 @@ export interface components {
              * @enum {string}
              */
             kind: "founding" | "referral";
+            /** Referrals */
+            referrals: number;
+            /** Earned Cents */
+            earned_cents: number;
+            /** Backed At */
+            backed_at: string;
         };
         /** Balances */
         Balances: {
@@ -774,6 +882,16 @@ export interface components {
             status: "draft" | "published" | "closed";
             /** Headline */
             headline: string;
+            /** Founding Price Cents */
+            founding_price_cents: number;
+            /** Spots Cap */
+            spots_cap: number;
+            /** Spots Taken */
+            spots_taken: number;
+            /** Backers */
+            backers: number;
+            /** Published At */
+            published_at: string | null;
         };
         /** CampaignUpdate */
         CampaignUpdate: {
@@ -795,6 +913,38 @@ export interface components {
             referral_discount_bps?: number | null;
             /** Commission Bps */
             commission_bps?: number | null;
+        };
+        /** ClaimRedeemIn */
+        ClaimRedeemIn: {
+            /** Product Id */
+            product_id: string;
+            /** Code */
+            code: string;
+            /** User Ref */
+            user_ref: string;
+        };
+        /** ClaimRedeemOut */
+        ClaimRedeemOut: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "redeemed" | "already_redeemed";
+            /** Order Id */
+            order_id: string;
+            /**
+             * Plan Id
+             * @enum {string}
+             */
+            plan_id: "founding" | "referral";
+            /** Badge Number */
+            badge_number: number | null;
+            /** Buyer Email */
+            buyer_email: string;
+            /** User Ref */
+            user_ref: string;
+            /** Claimed At */
+            claimed_at: string;
         };
         /** CommissionOut */
         CommissionOut: {
@@ -907,6 +1057,8 @@ export interface components {
             referral_code: string;
             /** Share Url */
             share_url: string;
+            /** Claim Code */
+            claim_code: string;
         };
         /** OrderCreate */
         OrderCreate: {
@@ -1144,6 +1296,10 @@ export interface components {
             name: string;
             /** Slug */
             slug: string;
+            /** Description */
+            description: string;
+            /** Created At */
+            created_at: string;
             campaign: components["schemas"]["CampaignRef"] | null;
         };
         /** ProductUpdate */
@@ -1208,6 +1364,29 @@ export interface components {
             trust: components["schemas"]["PublicTrust"];
             stats: components["schemas"]["PublicStats"];
             referrer: components["schemas"]["PublicReferrer"] | null;
+        };
+        /** PublicCampaignCard */
+        PublicCampaignCard: {
+            /** Slug */
+            slug: string;
+            /** Headline */
+            headline: string;
+            /** Summary */
+            summary: string;
+            product: components["schemas"]["PublicProduct"];
+            /** Builder Name */
+            builder_name: string;
+            founding: components["schemas"]["PublicFounding"];
+            /** Referral Price Cents */
+            referral_price_cents: number;
+            /** Commission Cents */
+            commission_cents: number;
+            /** Backers */
+            backers: number;
+            /** Backers This Week */
+            backers_this_week: number;
+            /** Published At */
+            published_at: string | null;
         };
         /** PublicConfig */
         PublicConfig: {
@@ -1362,6 +1541,8 @@ export interface components {
             platform_fee_cents: number;
             /** Commission Cents */
             commission_cents: number;
+            /** Access Claimed At */
+            access_claimed_at: string | null;
             /** Created At */
             created_at: string;
         };
@@ -1571,6 +1752,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProfileOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_activity_v1_me_activity_get: {
+        parameters: {
+            query?: {
+                weeks?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Activity"];
                 };
             };
             /** @description Validation Error */
@@ -2096,6 +2308,38 @@ export interface operations {
             };
         };
     };
+    list_public_campaigns_v1_public_campaigns_get: {
+        parameters: {
+            query?: {
+                sort?: "trending" | "new";
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicCampaignCard"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_public_campaign_v1_public_campaigns__slug__get: {
         parameters: {
             query?: {
@@ -2456,6 +2700,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RiskFlagOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    redeem_v1_claims_redeem_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClaimRedeemIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClaimRedeemOut"];
                 };
             };
             /** @description Validation Error */

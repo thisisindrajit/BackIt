@@ -266,6 +266,10 @@ class Backing(TimestampMixin, Base):
     referral_code: Mapped[str] = mapped_column(String(32), unique=True)
     status: Mapped[str] = mapped_column(String(16), default="active")
     order_id: Mapped[str] = mapped_column(ForeignKeyAlter("orders.id"), unique=True)
+    # One-time code the buyer redeems inside the builder's app to unlock what they paid for.
+    claim_code: Mapped[str] = mapped_column(String(16), unique=True)
+    claimed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    claimed_by: Mapped[str | None] = mapped_column(String(255))
 
 
 class Commission(TimestampMixin, Base):

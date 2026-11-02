@@ -16,6 +16,7 @@ from app.presenters import seller_connection
 from app.providers.paypal import CaptureResult, PayPalProvider, ProviderError
 from app.schemas import OrderCreate
 from app.security import public_ref
+from app.services.claims import generate_claim_code
 from app.services.common import audit, conflict
 from app.services.ledger import append_ledger, raise_flag
 from app.services.risk import evaluate_referral_purchase
@@ -323,6 +324,7 @@ def finalize_capture(db: Session, order: Order, result: CaptureResult, *, source
             referral_code=generate_referral_code(db, buyer.display_name),
             status="active",
             order_id=order.id,
+            claim_code=generate_claim_code(db),
         )
         db.add(backing)
         db.flush()
@@ -342,6 +344,7 @@ def finalize_capture(db: Session, order: Order, result: CaptureResult, *, source
                 referral_code=generate_referral_code(db, buyer.display_name),
                 status="active",
                 order_id=order.id,
+                claim_code=generate_claim_code(db),
             )
             db.add(backing)
             db.flush()

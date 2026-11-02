@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { FoundingSeal } from "@/components/backit/founding-seal";
 import { Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,7 +18,7 @@ type Kind = "founding" | "referral";
 export function BuyPanel({ campaign: c, referralCode, signedIn }: { campaign: PublicCampaign; referralCode?: string; signedIn: boolean }) {
   const router = useRouter();
   const { pending, run } = useAction();
-  const [key] = useState(() => crypto.randomUUID());
+  const idempotencyKeys = useRef(new Map<string, string>());
   const soldOut = c.founding.spots_left <= 0;
   const closed = c.status !== "published";
 
@@ -28,11 +28,17 @@ export function BuyPanel({ campaign: c, referralCode, signedIn }: { campaign: Pu
       router.push(`/sign-up?next=${encodeURIComponent(here)}`);
       return;
     }
+    const purchase = JSON.stringify([c.id, kind, kind === "referral" ? referralCode : null]);
+    let key = idempotencyKeys.current.get(purchase);
+    if (!key) {
+      key = crypto.randomUUID();
+      idempotencyKeys.current.set(purchase, key);
+    }
     const order = await run(kind, () =>
       authedApi<Order>(`/campaigns/${c.id}/orders`, {
         method: "POST",
         body: kind === "referral" ? { kind, referral_code: referralCode } : { kind },
-        idempotencyKey: `${key}-${kind}`,
+        idempotencyKey: key,
       }),
     );
     if (order) router.push(`/checkout/${order.id}`);

@@ -79,3 +79,28 @@ def test_paypal_webhook_requires_valid_signature(client) -> None:
     # Duplicate provider event ids are stored once.
     dup = client.post("/v1/webhooks/paypal", json=event, headers={"paypal-transmission-sig": "mock"})
     assert dup.status_code == 200
+
+
+def test_explore_lists_published_campaigns_without_private_data(client, campaign, buy, auth) -> None:
+    buy(campaign["campaign"]["id"], "alice")
+    h = auth("drafter")
+    product = client.post("/v1/products", headers=h, json={
+        "name": "Drafty", "url": "https://drafty.example.com", "description": "Unpublished",
+        "access_terms": "Pro",
+    }).json()
+    client.post("/v1/campaigns", headers=h, json={
+        "product_id": product["id"], "slug": "drafty", "headline": "Draft", "summary": "s", "story": "s",
+        "founding_price_cents": 4900, "founding_spots_cap": 3, "referral_list_price_cents": 10000,
+        "referral_discount_bps": 2000, "commission_bps": 2500,
+    })
+    for sort in ("trending", "new"):
+        r = client.get(f"/v1/public/campaigns?sort={sort}")
+        assert r.status_code == 200, r.text
+        cards = r.json()
+        assert [c["slug"] for c in cards] == ["shipfast"]
+    card = cards[0]
+    assert card["backers"] == 1 and card["backers_this_week"] == 1
+    assert card["founding"]["spots_left"] == 2
+    assert card["referral_price_cents"] == 8000 and card["commission_cents"] == 2000
+    assert "@" not in json.dumps(cards)
+    assert client.get("/v1/public/campaigns?sort=bogus").status_code == 422

@@ -12,7 +12,7 @@ RESERVED_SLUGS = frozenset(
         "campaigns", "checkout", "dashboard", "docs", "help", "login", "logout", "me",
         "new", "onboarding", "orders", "payouts", "pricing", "privacy", "products",
         "public", "settings", "signin", "signup", "sign-in", "sign-up", "static",
-        "support", "terms", "webhooks", "www", "ledger", "about", "blog", "status",
+        "support", "terms", "webhooks", "www", "ledger", "about", "blog", "status", "explore",
     }
 )
 
@@ -64,12 +64,19 @@ class CampaignRef(BaseModel):
     slug: str
     status: Literal["draft", "published", "closed"]
     headline: str
+    founding_price_cents: int
+    spots_cap: int
+    spots_taken: int
+    backers: int
+    published_at: str | None
 
 
 class ProductSummary(BaseModel):
     id: str
     name: str
     slug: str
+    description: str
+    created_at: str
     campaign: CampaignRef | None
 
 
@@ -77,14 +84,37 @@ class BackingSummary(BaseModel):
     id: str
     campaign_slug: str
     campaign_headline: str
+    product_name: str
+    builder_name: str
     badge_number: int | None
     kind: Literal["founding", "referral"]
+    referrals: int
+    earned_cents: int
+    backed_at: str
 
 
 class Me(BaseModel):
     profile: ProfileOut
     products: list[ProductSummary]
     backings: list[BackingSummary]
+
+
+class ActivityWeek(BaseModel):
+    week: str
+    sales_cents: int
+    earned_cents: int
+    sent_cents: int
+
+
+class ActivityTotals(BaseModel):
+    sales_cents: int
+    earned_cents: int
+    sent_cents: int
+
+
+class Activity(BaseModel):
+    weeks: list[ActivityWeek]
+    totals: ActivityTotals
 
 
 class ProfileUpdate(StrictModel):
@@ -307,6 +337,20 @@ class PublicCampaign(BaseModel):
     referrer: PublicReferrer | None
 
 
+class PublicCampaignCard(BaseModel):
+    slug: str
+    headline: str
+    summary: str
+    product: PublicProduct
+    builder_name: str
+    founding: PublicFounding
+    referral_price_cents: int
+    commission_cents: int
+    backers: int
+    backers_this_week: int
+    published_at: str | None
+
+
 LedgerType = Literal[
     "founding_purchase",
     "referral_purchase",
@@ -342,6 +386,7 @@ class OrderBacking(BaseModel):
     badge_number: int | None
     referral_code: str
     share_url: str
+    claim_code: str
 
 
 class OrderAccess(BaseModel):
@@ -380,6 +425,8 @@ class BackingCampaign(BaseModel):
     slug: str
     headline: str
     product_name: str
+    product_url: str
+    builder_name: str
 
 
 class Balances(BaseModel):
@@ -409,6 +456,9 @@ class BackingOut(BaseModel):
     badge_number: int | None
     referral_code: str
     share_url: str
+    status: Literal["active", "revoked"]
+    claim_code: str
+    claimed_at: str | None
     balances: Balances
     commissions: list[CommissionOut]
     created_at: str
@@ -427,6 +477,25 @@ class ShareDraft(BaseModel):
 class ShareDraftsOut(BaseModel):
     drafts: list[ShareDraft]
     source: Literal["ai", "template"]
+
+
+# ---------- Claims ----------
+
+
+class ClaimRedeemIn(StrictModel):
+    product_id: Annotated[str, Field(min_length=1, max_length=64)]
+    code: Annotated[str, Field(min_length=1, max_length=32)]
+    user_ref: Annotated[str, Field(min_length=1, max_length=255)]
+
+
+class ClaimRedeemOut(BaseModel):
+    status: Literal["redeemed", "already_redeemed"]
+    order_id: str
+    plan_id: Literal["founding", "referral"]
+    badge_number: int | None
+    buyer_email: str
+    user_ref: str
+    claimed_at: str
 
 
 # ---------- Builder ----------
@@ -450,6 +519,7 @@ class SalesOrder(BaseModel):
     amount_cents: int
     platform_fee_cents: int
     commission_cents: int
+    access_claimed_at: str | None
     created_at: str
 
 

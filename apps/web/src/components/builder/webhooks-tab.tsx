@@ -2,10 +2,11 @@
 
 import { Button } from "@/components/ui/button";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ErrorState } from "@/components/backit/error-state";
 import { StatusBadge } from "@/components/backit/status-badge";
+import { TableSkeleton } from "@/components/backit/skeletons";
+import { Skeleton } from "@/components/ui/skeleton";
 import { authedApi, useApi } from "@/hooks/use-api";
 import { shortDate } from "@/lib/format";
 import type { RiskFlag, WebhookDelivery } from "@/lib/api/types";
@@ -24,16 +25,11 @@ export function WebhooksTab({ productId }: { productId: string }) {
   return (
     <div className="flex flex-col gap-10">
       <section className="flex flex-col gap-3">
-        <div className="flex items-center justify-between gap-2">
-          <h2 className="text-lg font-semibold">Deliveries to your app</h2>
-          <Button variant="outline" size="sm" onClick={deliveries.reload}>
-            Refresh
-          </Button>
-        </div>
+        <h2 className="text-2xl">Deliveries to your app</h2>
         {deliveries.error ? (
           <ErrorState error={deliveries.error} onRetry={deliveries.reload} />
-        ) : deliveries.loading && !deliveries.data ? (
-          <Skeleton className="h-32" />
+        ) : !deliveries.data ? (
+          <TableSkeleton rows={3} />
         ) : deliveries.data?.length ? (
           <Table>
             <TableHeader>
@@ -84,10 +80,12 @@ export function WebhooksTab({ productId }: { productId: string }) {
 
       <section className="flex flex-col gap-3">
         <div className="flex flex-col gap-1">
-          <h2 className="text-lg font-semibold">Review flags</h2>
+          <h2 className="text-2xl">Review flags</h2>
           <p className="text-sm text-muted-foreground">Rule-based checks such as self-referral. Flagged commissions are held from payouts until reviewed.</p>
         </div>
-        {flags.data?.length ? (
+        {!flags.data && !flags.error ? (
+          <Skeleton className="h-16 rounded-lg" aria-hidden />
+        ) : flags.data?.length ? (
           <ul className="flex flex-col divide-y rounded-lg border">
             {flags.data.map((f) => (
               <li key={f.id} className="flex flex-col gap-1 p-3">
@@ -101,7 +99,7 @@ export function WebhooksTab({ productId }: { productId: string }) {
             ))}
           </ul>
         ) : (
-          <p className="text-sm text-muted-foreground">{flags.loading ? "Loading…" : "Nothing flagged."}</p>
+          <p className="text-sm text-muted-foreground">Nothing flagged.</p>
         )}
       </section>
     </div>

@@ -66,7 +66,32 @@ def test_grant_dedupe_and_revoke_only_that_order(client: TestClient) -> None:
     ents = {e["order_id"]: e for e in client.get("/entitlements").json()}
     assert ents["ord_1"]["status"] == "revoked" and ents["ord_1"]["revoked_at"]
     assert ents["ord_2"]["status"] == "active" and ents["ord_2"]["revoked_at"] is None
-    assert set(ents["ord_2"]) == {"order_id", "buyer_email", "plan_id", "status", "granted_at", "revoked_at"}
+    assert set(ents["ord_2"]) == {"order_id", "buyer_email", "plan_id", "status", "granted_at", "revoked_at",
+                                  "claimed_by"}
 
     events = client.get("/events").json()
     assert sorted(e["event_id"] for e in events) == ["evt_1", "evt_2", "evt_3"]
+
+
+def test_claim_unlocks_for_user_and_survives_webhook(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    from demo_product import main
+
+    calls: list[tuple[str, str]] = []
+
+    def fake_redeem(code: str, user_ref: str) -> dict:
+        calls.append((code, user_ref))
+        return {"status": "redeemed", "order_id": "ord_9", "plan_id": "founding",
+                "buyer_email": "b@example.com", "user_ref": user_ref}
+
+    monkeypatch.setattr(main, "redeem_with_backit", fake_redeem)
+    r = client.post("/claims", json={"code": "ABCD-EFGH-JKMN", "user_ref": "user_1"})
+    assert r.status_code == 200 and r.json()["status"] == "redeemed"
+    assert calls == [("ABCD-EFGH-JKMN", "user_1")]
+    send(client, purchase("evt_9", "ord_9"))  # late webhook must not erase the claim
+    [ent] = client.get("/entitlements").json()
+    assert ent["claimed_by"] == "user_1" and ent["status"] == "active"
+
+
+def test_claim_needs_product_id(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("BACKIT_PRODUCT_ID", raising=False)
+    assert client.post("/claims", json={"code": "X", "user_ref": "u"}).status_code == 503

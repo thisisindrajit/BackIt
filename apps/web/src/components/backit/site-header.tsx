@@ -1,12 +1,11 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { headers } from "next/headers";
 import { Button } from "@/components/ui/button";
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { Wordmark } from "./wordmark";
 
 async function SessionNav() {
-  const session = await auth.api.getSession({ headers: await headers() }).catch(() => null);
+  const session = await getSession();
   if (session) {
     return (
       <Button render={<Link href="/app" />} nativeButton={false}>
@@ -28,6 +27,7 @@ async function SessionNav() {
 }
 
 const links = [
+  { href: "/explore", label: "Explore" },
   { href: "/#how-it-works", label: "How it works" },
   { href: "/#why", label: "Why BackIt" },
   { href: "/#pricing", label: "Pricing" },
@@ -35,7 +35,7 @@ const links = [
 
 export function SiteHeader() {
   return (
-    <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-md">
+    <header className="sticky top-0 z-30 bg-background/80 pt-[env(safe-area-inset-top)] backdrop-blur-md">
       <div className="page-shell grid h-16 grid-cols-[1fr_auto] items-center gap-3 md:grid-cols-[1fr_auto_1fr]">
         <Wordmark />
         <nav aria-label="Main" className="hidden items-center gap-1 md:flex">

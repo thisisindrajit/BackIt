@@ -1,7 +1,8 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryProvider } from "@/components/backit/query-provider";
 import "./globals.css";
 
 // Timeless Serif is primary (headings, money, story); Timeless Sans is secondary (interface).
@@ -27,12 +28,19 @@ export const metadata: Metadata = {
     "Turn your first fans into your best salespeople. Early fans buy at a founding price and earn a reward for every friend who buys.",
 };
 
+export const viewport: Viewport = {
+  viewportFit: "cover",
+  themeColor: "#ffffff",
+};
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${timelessSerif.variable} ${timelessSans.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col">
-        <TooltipProvider>{children}</TooltipProvider>
-        <Toaster position="bottom-right" />
+        <QueryProvider>
+          <TooltipProvider>{children}</TooltipProvider>
+        </QueryProvider>
+        <Toaster position="bottom-right" mobileOffset={{ bottom: "calc(5.5rem + env(safe-area-inset-bottom))" }} />
       </body>
     </html>
   );

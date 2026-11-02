@@ -113,6 +113,13 @@ def test_payout_preview_approve_and_mock_execution(client, campaign, buy, db) ->
     assert mine[0]["balances"]["paid_cents"] == 2000
     assert len(client.get(f"/v1/products/{pid}/payout-batches", headers=h).json()) == 1
 
+    activity = client.get("/v1/me/activity", headers=h).json()
+    assert len(activity["weeks"]) == 12
+    assert activity["totals"]["sent_cents"] == 2000
+    assert activity["totals"]["sales_cents"] == sum(w["sales_cents"] for w in activity["weeks"]) > 0
+    earned = client.get("/v1/me/activity", headers=_h("alice")).json()["totals"]
+    assert earned == {"sales_cents": 0, "earned_cents": 2000, "sent_cents": 0}
+
     # Running the worker again does not pay twice.
     worker.run_once()
     db.expire_all()

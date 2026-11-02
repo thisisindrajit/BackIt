@@ -1,13 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { headers } from "next/headers";
 import { ArrowUpRightIcon } from "lucide-react";
 import { SiteFooter } from "@/components/backit/site-footer";
 import { SiteHeader } from "@/components/backit/site-header";
 import { BuyPanel } from "@/components/public/buy-panel";
 import { TrustCard } from "@/components/public/trust-card";
-import { auth } from "@/lib/auth";
 import { getPublicCampaign } from "@/lib/api/server";
+import { getSession } from "@/lib/session";
 
 export async function generateMetadata({ params }: PageProps<"/[slug]">): Promise<Metadata> {
   const { slug } = await params;
@@ -21,7 +20,7 @@ export default async function CampaignPage({ params, searchParams }: PageProps<"
   const ref = typeof sp.ref === "string" ? sp.ref : undefined;
   const [c, session] = await Promise.all([
     getPublicCampaign(slug, ref),
-    auth.api.getSession({ headers: await headers() }).catch(() => null),
+    getSession(),
   ]);
 
   return (

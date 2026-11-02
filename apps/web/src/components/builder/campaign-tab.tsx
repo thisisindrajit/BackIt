@@ -1,7 +1,7 @@
 "use client";
 
 import { CheckIcon, SparklesIcon, XIcon } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -10,9 +10,10 @@ import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle }
 import { Field, FieldDescription, FieldGroup, FieldLabel, FieldLegend, FieldSet } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { InputGroup, InputGroupAddon, InputGroupInput, InputGroupText } from "@/components/ui/input-group";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
-import { authedApi } from "@/hooks/use-api";
+import { authedApi, useApi } from "@/hooks/use-api";
 import { ApiError, errorMessage } from "@/lib/api/client";
 import { dollarsToCents, percentToBps } from "@/lib/format";
 import type { Campaign, CampaignDraft, Product, Readiness } from "@/lib/api/types";
@@ -68,7 +69,7 @@ export function CampaignTab({ product, onChange }: { product: Product; onChange:
   if (!campaign && !draft) return <DraftStart product={product} onDraft={setDraft} />;
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_18rem]">
+    <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
       <CampaignForm
         key={campaign?.id ?? "new"}
         product={product}
@@ -96,7 +97,7 @@ function DraftStart({ product, onDraft }: { product: Product; onDraft: (d: Campa
   }
 
   return (
-    <Card className="max-w-2xl">
+    <Card>
       <CardHeader>
         <CardTitle>Draft your campaign</CardTitle>
         <CardDescription>
@@ -267,14 +268,15 @@ function PercentField({ id, label, ...props }: { id: string; label: string; valu
 }
 
 function ReadinessPanel({ campaign, onPublished }: { campaign: Campaign; onPublished: () => void }) {
-  const [readiness, setReadiness] = useState<Readiness | null>(null);
+  const { data: readiness, reload: load } = useApi<Readiness>(campaign.status === "published" ? null : `/campaigns/${campaign.id}/readiness`);
   const { pending, run } = useAction();
 
-  const load = useCallback(() => {
-    authedApi<Readiness>(`/campaigns/${campaign.id}/readiness`).then(setReadiness).catch(() => {});
-  }, [campaign.id]);
-
-  useEffect(load, [load, campaign.updated_at]);
+  const seen = useRef(campaign.updated_at);
+  useEffect(() => {
+    if (seen.current === campaign.updated_at) return;
+    seen.current = campaign.updated_at;
+    void load();
+  }, [load, campaign.updated_at]);
 
   async function publish() {
     try {
@@ -292,7 +294,7 @@ function ReadinessPanel({ campaign, onPublished }: { campaign: Campaign; onPubli
 
   if (campaign.status === "published") {
     return (
-      <Card size="sm" className="h-fit">
+      <Card size="sm" className="h-fit xl:sticky xl:top-6">
         <CardHeader>
           <CardTitle>Live</CardTitle>
           <CardDescription>
@@ -304,7 +306,7 @@ function ReadinessPanel({ campaign, onPublished }: { campaign: Campaign; onPubli
   }
 
   return (
-    <Card size="sm" className="h-fit">
+    <Card size="sm" className="h-fit xl:sticky xl:top-6">
       <CardHeader>
         <CardTitle>Ready to publish?</CardTitle>
       </CardHeader>
@@ -318,7 +320,13 @@ function ReadinessPanel({ campaign, onPublished }: { campaign: Campaign; onPubli
                 {!c.ok && c.detail ? <span className="text-muted-foreground">{c.detail}</span> : null}
               </span>
             </li>
-          )) ?? <Spinner />}
+          )) ??
+            [0, 1, 2, 3].map((i) => (
+              <li key={i} className="flex gap-2" aria-hidden>
+                <Skeleton className="size-4 shrink-0 rounded-full" />
+                <Skeleton className="h-4 flex-1" />
+              </li>
+            ))}
         </ul>
         <Button onClick={publish} disabled={!readiness?.ready || pending === "publish"}>
           {pending === "publish" ? <Spinner data-icon="inline-start" /> : null}

@@ -19,9 +19,13 @@ type Options = {
   idempotencyKey?: string;
   cache?: RequestCache;
   next?: { revalidate?: number };
+  timeoutMs?: number;
 };
 
-export async function api<T>(path: string, { method = "GET", body, token, idempotencyKey, cache, next }: Options = {}): Promise<T> {
+// Fail fast when the API stalls, so cached renders error clearly instead of hitting Next's 50s prerender limit.
+const DEFAULT_TIMEOUT_MS = 15_000;
+
+export async function api<T>(path: string, { method = "GET", body, token, idempotencyKey, cache, next, timeoutMs = DEFAULT_TIMEOUT_MS }: Options = {}): Promise<T> {
   const headers: Record<string, string> = { Accept: "application/json" };
   if (body !== undefined) headers["Content-Type"] = "application/json";
   if (token) headers.Authorization = `Bearer ${token}`;
@@ -35,8 +39,12 @@ export async function api<T>(path: string, { method = "GET", body, token, idempo
       body: body === undefined ? undefined : JSON.stringify(body),
       cache,
       next,
+      signal: AbortSignal.timeout(timeoutMs),
     });
-  } catch {
+  } catch (e) {
+    if (e instanceof DOMException && e.name === "TimeoutError") {
+      throw new ApiError(0, "timeout", "The BackIt API took too long to respond. Try again in a moment.");
+    }
     throw new ApiError(0, "network_error", "Can't reach the BackIt API. Check that it is running and try again.");
   }
 

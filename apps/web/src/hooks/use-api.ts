@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback } from "react";
+import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
 import { authClient } from "@/lib/auth-client";
 import { api, ApiError } from "@/lib/api/client";
 
@@ -26,33 +27,47 @@ export function authedApi<T>(path: string, options: CallOptions = {}) {
   return getToken().then((token) => api<T>(path, { ...options, token }));
 }
 
+export const apiKey = (path: string) => ["api", path] as const;
+
+export function apiQuery<T>(path: string) {
+  return queryOptions({ queryKey: apiKey(path), queryFn: () => authedApi<T>(path) });
+}
+
 export function useApi<T>(path: string | null) {
-  const [data, setData] = useState<T | null>(null);
-  const [error, setError] = useState<unknown>(null);
-  const [loading, setLoading] = useState(Boolean(path));
-  const seq = useRef(0);
+  const queryClient = useQueryClient();
+  const query = useQuery({ ...apiQuery<T>(path ?? ""), enabled: Boolean(path) });
 
   const reload = useCallback(async () => {
-    if (!path) return;
-    const id = ++seq.current;
-    setLoading(true);
-    try {
-      const result = await authedApi<T>(path);
-      if (id === seq.current) {
-        setData(result);
-        setError(null);
-      }
-    } catch (e) {
-      if (id === seq.current) setError(e);
-    } finally {
-      if (id === seq.current) setLoading(false);
-    }
-  }, [path]);
+    if (path) await queryClient.invalidateQueries({ queryKey: apiKey(path) });
+  }, [queryClient, path]);
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    void reload();
-  }, [reload]);
+  const setData = useCallback((value: T) => {
+    if (path) queryClient.setQueryData(apiKey(path), value);
+  }, [queryClient, path]);
 
-  return { data, setData, error, loading, reload };
+  return {
+    data: query.data ?? null,
+    setData,
+    error: query.error,
+    loading: query.isPending && Boolean(path),
+    fetching: query.isFetching,
+    reload,
+  };
+}
+
+/** Marks cached API data stale and refetches whatever is on screen. */
+export function useInvalidate() {
+  const queryClient = useQueryClient();
+  return useCallback(
+    (...paths: string[]) => Promise.all(paths.map((p) => queryClient.invalidateQueries({ queryKey: apiKey(p) }))),
+    [queryClient],
+  );
+}
+
+/** Warms the cache before navigation so the next page renders with data. */
+export function usePrefetch() {
+  const queryClient = useQueryClient();
+  return useCallback((...paths: string[]) => {
+    for (const p of paths) void queryClient.prefetchQuery(apiQuery(p));
+  }, [queryClient]);
 }

@@ -65,9 +65,11 @@ The demo product verifies webhook signatures, so it needs the secret that BackIt
 3. Start the demo product:
    ```bash
    cd examples/demo-product
-   BACKIT_WEBHOOK_SECRET=whsec_... uv run fastapi dev --port 8100
+   BACKIT_WEBHOOK_SECRET=whsec_... BACKIT_PRODUCT_ID=prd_... uv run fastapi dev --port 8100
    ```
 4. In **Setup**, click **Send test ping**. It should show as delivered.
+
+`BACKIT_PRODUCT_ID` (and `BACKIT_API_URL`, default `http://localhost:8001`) let `/demo` redeem backers' one-time access codes. See [Access claim codes](docs/api-contract.md#access-claim-codes).
 
 ## Mock walkthrough
 
@@ -75,9 +77,9 @@ With `PAYPAL_MODE=mock`, the whole loop runs locally. Every mock ID is prefixed 
 
 1. **Builder:** create the product, then complete Setup. Setup covers connecting PayPal (mock), adding revenue evidence (demo), and sending a test ping.
 2. **Campaign:** generate an AI draft, edit it, run the readiness check, and publish.
-3. **Founding backer:** open `/{slug}` in another browser, sign up, and buy. The badge appears and `/demo` shows access granted.
+3. **Founding backer:** open `/{slug}` in another browser, sign up, and buy. The badge and a one-time access code appear. Redeem the code on `/demo` to unlock it for an account there.
 4. **Referral sale:** copy the backer's link from **Backing**, open it in a third account, and buy. The discount applies, and the backer's commission appears as *held*.
-5. **Refund:** refund a sale in **Sales**. The demo product revokes access and the commission is reversed.
+5. **Refund:** refund a sale in **Sales**. The demo product revokes access, the code stops working, and the commission is reversed.
 6. **Payout:** the backer sets a payout email in Settings. In development, use **Skip hold (demo)** on Payouts. Then create a preview, review the agent summary and exclusions, and approve.
 
 ## Environment

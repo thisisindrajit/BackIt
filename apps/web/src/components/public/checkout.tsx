@@ -13,6 +13,7 @@ import { ErrorState } from "@/components/backit/error-state";
 import { Confetti } from "@/components/backit/confetti";
 import { FoundingSeal } from "@/components/backit/founding-seal";
 import { StatusBadge } from "@/components/backit/status-badge";
+import { AccessCode } from "@/components/backer/access-code";
 import { CopyField } from "@/components/builder/secret-reveal";
 import { authedApi, useApi } from "@/hooks/use-api";
 import { useAction } from "@/hooks/use-action";
@@ -22,10 +23,10 @@ import type { Order } from "@/lib/api/types";
 import { PayPalButton } from "./paypal-button";
 
 const accessCopy: Record<Order["access"]["status"], string> = {
-  pending: "Unlocking your access in the product…",
-  delivered: "Access unlocked in the product.",
-  failed: "The product hasn't confirmed access yet. BackIt keeps retrying, and the builder can see it.",
-  not_configured: "The builder will grant access directly.",
+  pending: "Letting the product know about your purchase…",
+  delivered: "The product has your purchase. Redeem the code above there to unlock your plan.",
+  failed: "The product hasn't confirmed yet. BackIt keeps retrying, and your code works either way.",
+  not_configured: "Redeem the code above in the product to unlock your plan.",
 };
 
 export function Checkout({ orderId }: { orderId: string }) {
@@ -94,6 +95,7 @@ export function Checkout({ orderId }: { orderId: string }) {
         </CardHeader>
         {b ? (
           <CardContent className="flex flex-col gap-6">
+            <AccessCode code={b.claim_code} />
             <div className="flex flex-col gap-2">
               <p className="text-sm font-medium">Your referral link</p>
               <CopyField value={b.share_url} label="Referral link" />

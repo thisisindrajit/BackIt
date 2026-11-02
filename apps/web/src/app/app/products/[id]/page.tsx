@@ -5,6 +5,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { ExternalLinkIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CardsSkeleton, PageHeaderSkeleton } from "@/components/backit/skeletons";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ErrorState } from "@/components/backit/error-state";
 import { PageHeader } from "@/components/backit/page-header";
@@ -14,7 +15,7 @@ import { PayoutsTab } from "@/components/builder/payouts-tab";
 import { SalesTab } from "@/components/builder/sales-tab";
 import { SetupTab } from "@/components/builder/setup-tab";
 import { WebhooksTab } from "@/components/builder/webhooks-tab";
-import { useApi } from "@/hooks/use-api";
+import { useApi, useInvalidate } from "@/hooks/use-api";
 import type { Product } from "@/lib/api/types";
 
 const tabs = ["setup", "campaign", "sales", "payouts", "webhooks"] as const;
@@ -24,11 +25,22 @@ export default function ProductPage() {
   const router = useRouter();
   const params = useSearchParams();
   const tab = tabs.find((t) => t === params.get("tab")) ?? "setup";
-  const { data: product, error, loading, reload } = useApi<Product>(`/products/${id}`);
+  const { data: product, error, reload } = useApi<Product>(`/products/${id}`);
+  const invalidate = useInvalidate();
+  const onChange = () => void invalidate(`/products/${id}`, "/me");
 
   if (error) return <ErrorState error={error} onRetry={reload} />;
-  if (loading && !product) return <Skeleton className="h-64" />;
-  if (!product) return null;
+  if (!product) {
+    return (
+      <>
+        <PageHeaderSkeleton />
+        <div className="flex flex-col gap-4" aria-hidden>
+          <Skeleton className="h-9 w-full rounded-full sm:w-96" />
+          <CardsSkeleton count={2} className="lg:grid-cols-2" />
+        </div>
+      </>
+    );
+  }
 
   const campaign = product.campaign;
 
@@ -60,10 +72,10 @@ export default function ProductPage() {
           <TabsTrigger value="webhooks">Webhooks</TabsTrigger>
         </TabsList>
         <TabsContent value="setup" className="pt-4">
-          <SetupTab product={product} onChange={reload} />
+          <SetupTab product={product} onChange={onChange} />
         </TabsContent>
         <TabsContent value="campaign" className="pt-4">
-          <CampaignTab product={product} onChange={reload} />
+          <CampaignTab product={product} onChange={onChange} />
         </TabsContent>
         <TabsContent value="sales" className="pt-4">
           {tab === "sales" ? <SalesTab productId={product.id} /> : null}

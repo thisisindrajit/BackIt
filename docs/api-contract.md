@@ -191,4 +191,26 @@ Headers:
 - `BackIt-Signature: v1=<hex hmac_sha256(secret, f"{timestamp}.{raw_body}")>`
 - `BackIt-Key-Version`
 
-The body follows plan §8. Events: `ping`, `purchase.completed`, and `refund.issued`.
+The body follows plan §8. Events: `ping`, `purchase.completed`, and `refund.issued`. `refund.issued` includes `claimed_by` (the `user_ref` that redeemed the order's access code, or `null`).
+
+## Access claim codes
+
+Every backing has a one-time access code (`XXXX-XXXX-XXXX`, Crockford base32). The backer sees it on the checkout receipt and in **Backing** (`claim_code`, `claimed_at` and `status` on `BackingOut`). The builder's app redeems it from its server so the purchase is tied to the right account there.
+
+`POST /v1/claims/redeem` with `Authorization: Bearer <product webhook secret>`:
+
+```json
+{ "product_id": "prd_…", "code": "abcd efgh jkmn", "user_ref": "your-user-id" }
+```
+
+Codes are matched case-insensitively, ignore spaces and dashes, and read O as 0 and I or L as 1.
+
+| Status | Meaning |
+| --- | --- |
+| `200` | `{status: "redeemed" \| "already_redeemed", order_id, plan_id, badge_number, buyer_email, user_ref, claimed_at}`. Repeating with the same `user_ref` is safe. |
+| `401 invalid_product_secret` | Unknown product or wrong secret. |
+| `404 claim_code_not_found` | No purchase with that code for this product. |
+| `409 claim_code_used` | Already redeemed by a different `user_ref`. |
+| `410 access_revoked` | The purchase was refunded. |
+
+The builder's sales list shows `access_claimed_at` per order.

@@ -7,6 +7,7 @@ import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle }
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { InputGroup, InputGroupAddon, InputGroupInput, InputGroupText } from "@/components/ui/input-group";
+import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { StatusBadge } from "@/components/backit/status-badge";
@@ -15,6 +16,15 @@ import { dollarsToCents, money, monthLabel, shortDate } from "@/lib/format";
 import type { Product, WebhookDelivery } from "@/lib/api/types";
 import { CopyField } from "./secret-reveal";
 import { useAction } from "@/hooks/use-action";
+import { API_URL } from "@/lib/api/client";
+
+const redeemSnippet = (productId: string) =>
+  [
+    `curl -X POST ${API_URL}/claims/redeem \\`,
+    `  -H "Authorization: Bearer $BACKIT_WEBHOOK_SECRET" \\`,
+    `  -H "Content-Type: application/json" \\`,
+    `  -d '{"product_id": "${productId}", "code": "ABCD-EFGH-JKMN", "user_ref": "your-user-id"}'`,
+  ].join("\n");
 
 export function SetupTab({ product, onChange }: { product: Product; onChange: () => void }) {
   const { pending, run } = useAction();
@@ -60,7 +70,7 @@ export function SetupTab({ product, onChange }: { product: Product; onChange: ()
   }
 
   return (
-    <div className="flex max-w-3xl flex-col gap-6">
+    <div className="grid gap-6 lg:grid-cols-2">
       <Card>
         <CardHeader>
           <CardTitle>1. Get paid through PayPal</CardTitle>
@@ -162,10 +172,10 @@ export function SetupTab({ product, onChange }: { product: Product; onChange: ()
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="lg:col-span-2">
         <CardHeader>
-          <CardTitle>3. Grant access automatically</CardTitle>
-          <CardDescription>BackIt signs a webhook to your app on every purchase and refund, so access follows real payments.</CardDescription>
+          <CardTitle>3. Grant access</CardTitle>
+          <CardDescription>Every backer gets a one-time access code. Add a “Redeem code” box to your app and unlock the plan when BackIt confirms it.</CardDescription>
           <CardAction>
             <StatusBadge status={product.webhook_url ? "connected" : "not_configured"} />
           </CardAction>
@@ -196,6 +206,14 @@ export function SetupTab({ product, onChange }: { product: Product; onChange: ()
               </div>
             </FieldGroup>
           </form>
+          <Separator className="my-6" />
+          <div className="flex flex-col gap-3">
+            <p className="text-sm font-medium">Redeem a backer’s code from your server</p>
+            <pre className="overflow-x-auto rounded-2xl bg-muted p-4 font-mono text-xs leading-relaxed">{redeemSnippet(product.id)}</pre>
+            <p className="text-xs text-muted-foreground">
+              Use your webhook secret as the bearer token and pass your own user id as <span className="font-mono">user_ref</span>. A code works for one account only; the same account can retry safely. Refunds return <span className="font-mono">410</span> and the <span className="font-mono">refund.issued</span> webhook includes <span className="font-mono">claimed_by</span> so you can remove access.
+            </p>
+          </div>
         </CardContent>
       </Card>
     </div>

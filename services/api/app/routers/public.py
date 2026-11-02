@@ -1,7 +1,7 @@
 import base64
 import binascii
-from datetime import datetime
-from typing import Annotated
+from datetime import datetime, timedelta
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Query
 from sqlalchemy import and_, func, or_, select
@@ -9,7 +9,7 @@ from sqlalchemy import and_, func, or_, select
 from app.config import get_settings
 from app.deps import DBDep
 from app.errors import AppError, not_found
-from app.ids import iso
+from app.ids import iso, utcnow
 from app.models import Backing, Campaign, LedgerEntry, Order, Product, Profile
 from app.money import quote_referral
 from app.presenters import latest_verification, seller_connection, verification_out
@@ -17,6 +17,7 @@ from app.schemas import (
     LedgerItem,
     LedgerPage,
     PublicCampaign,
+    PublicCampaignCard,
     PublicFounding,
     PublicProduct,
     PublicReferral,
@@ -35,6 +36,53 @@ def _published(db: DBDep, slug: str) -> Campaign:
     if campaign is None or campaign.status != "published":
         raise not_found("Campaign")
     return campaign
+
+
+@router.get("/campaigns")
+def list_public_campaigns(
+    db: DBDep,
+    sort: Literal["trending", "new"] = "trending",
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+) -> list[PublicCampaignCard]:
+    week_ago = utcnow() - timedelta(days=7)
+    backers = func.count(Backing.id)
+    this_week = func.count(Backing.id).filter(Backing.created_at >= week_ago)
+    rows = db.execute(
+        select(Campaign, Product, Profile.display_name, backers, this_week)
+        .join(Product, Product.id == Campaign.product_id)
+        .outerjoin(Profile, Profile.id == Product.owner_id)
+        .outerjoin(Backing, Backing.campaign_id == Campaign.id)
+        .where(Campaign.status == "published")
+        .group_by(Campaign.id, Product.id, Profile.display_name)
+        .order_by(*(
+            (this_week.desc(), backers.desc(), Campaign.published_at.desc())
+            if sort == "trending" else (Campaign.published_at.desc(),)
+        ), Campaign.id)
+        .limit(limit)
+    ).all()
+    cards = []
+    for campaign, product, builder_name, total, recent in rows:
+        quote = quote_referral(campaign.referral_list_price_cents, campaign.referral_discount_bps,
+                               campaign.commission_bps, campaign.platform_fee_bps)
+        cards.append(PublicCampaignCard(
+            slug=campaign.slug,
+            headline=campaign.headline,
+            summary=campaign.summary,
+            product=PublicProduct(name=product.name, url=product.url),
+            builder_name=builder_name or "Builder",
+            founding=PublicFounding(
+                price_cents=campaign.founding_price_cents,
+                spots_cap=campaign.founding_spots_cap,
+                spots_taken=campaign.founding_spots_taken,
+                spots_left=max(campaign.founding_spots_cap - campaign.founding_spots_taken, 0),
+            ),
+            referral_price_cents=quote.amount_cents,
+            commission_cents=quote.commission_cents,
+            backers=int(total),
+            backers_this_week=int(recent),
+            published_at=iso(campaign.published_at),
+        ))
+    return cards
 
 
 @router.get("/campaigns/{slug}")

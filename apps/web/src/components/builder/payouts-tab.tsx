@@ -15,6 +15,7 @@ import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, Table
 import { ErrorState } from "@/components/backit/error-state";
 import { StatusBadge } from "@/components/backit/status-badge";
 import { authedApi, useApi } from "@/hooks/use-api";
+import { CardsSkeleton } from "@/components/backit/skeletons";
 import { useConfig } from "@/hooks/use-config";
 import { money, shortDate } from "@/lib/format";
 import type { PayoutBatch, PayoutPreview } from "@/lib/api/types";
@@ -73,7 +74,7 @@ export function PayoutsTab({ productId }: { productId: string }) {
     <div className="flex flex-col gap-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex max-w-prose flex-col gap-1">
-          <h2 className="text-lg font-semibold">Pay your backers</h2>
+          <h2 className="text-2xl">Pay your backers</h2>
           <p className="text-sm text-muted-foreground">
             The payout agent gathers commissions past their 30-day hold, explains what’s excluded, and freezes an exact preview. Nothing is sent until you approve it.
           </p>
@@ -198,16 +199,13 @@ export function PayoutsTab({ productId }: { productId: string }) {
       ) : null}
 
       <section className="flex flex-col gap-3">
-        <div className="flex items-center justify-between gap-2">
-          <h2 className="text-lg font-semibold">Payout history</h2>
-          <Button variant="outline" size="sm" onClick={batches.reload}>
-            Refresh
-          </Button>
-        </div>
+        <h2 className="text-2xl">Payout history</h2>
         {batches.error ? (
           <ErrorState error={batches.error} onRetry={batches.reload} />
-        ) : batches.data?.length ? (
-          <div className="flex flex-col gap-4">
+        ) : !batches.data ? (
+          <CardsSkeleton count={1} />
+        ) : batches.data.length ? (
+          <div className="grid gap-4 xl:grid-cols-2">
             {batches.data.map((b) => (
               <Card key={b.id} size="sm">
                 <CardHeader>

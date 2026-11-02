@@ -46,6 +46,7 @@ from app.schemas import (
     WebhookDeliveryOut,
 )
 from app.security import public_ref
+from app.services.claims import format_claim_code
 
 
 def profile_out(p: Profile) -> ProfileOut:
@@ -199,6 +200,7 @@ def order_out(db: Session, order: Order) -> OrderOut:
             badge_number=backing.badge_number,
             referral_code=backing.referral_code,
             share_url=share_url(campaign.slug, backing.referral_code),
+            claim_code=format_claim_code(backing.claim_code),
         )
         if backing
         else None,
@@ -234,6 +236,7 @@ def backing_out(db: Session, backing: Backing) -> BackingOut:
     assert campaign is not None
     product = db.get(Product, campaign.product_id)
     assert product is not None
+    owner = db.get(Profile, product.owner_id)
     commissions = db.scalars(
         select(Commission)
         .where(Commission.backing_id == backing.id)
@@ -245,10 +248,15 @@ def backing_out(db: Session, backing: Backing) -> BackingOut:
         campaign=BackingCampaign(
             id=campaign.id, slug=campaign.slug, headline=campaign.headline,
             product_name=product.name,
+            product_url=product.url,
+            builder_name=owner.display_name if owner else "Builder",
         ),
         badge_number=backing.badge_number,
         referral_code=backing.referral_code,
         share_url=share_url(campaign.slug, backing.referral_code),
+        status=backing.status,  # type: ignore[arg-type]
+        claim_code=format_claim_code(backing.claim_code),
+        claimed_at=iso(backing.claimed_at),
         balances=balances_for(db, backing.id),
         commissions=[
             CommissionOut(

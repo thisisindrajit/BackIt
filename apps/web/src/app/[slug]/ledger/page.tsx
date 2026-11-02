@@ -38,7 +38,7 @@ export default async function LedgerPage({ params, searchParams }: PageProps<"/[
           {c.product.name}
         </Button>
         <header className="flex flex-col gap-2">
-          <h1 className="text-3xl font-semibold">Public ledger</h1>
+          <h1 className="text-3xl">Public ledger</h1>
           <p className="max-w-prose text-muted-foreground">
             Every money event on this campaign, newest first. Buyers and backers stay anonymous; each line has a reference you can quote to the builder.
           </p>

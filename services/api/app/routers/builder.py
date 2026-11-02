@@ -4,7 +4,7 @@ from sqlalchemy import func, select
 from app.deps import CurrentUserDep, DBDep
 from app.errors import forbidden, not_found
 from app.ids import iso, utcnow
-from app.models import Commission, Order, Product, Profile, RiskFlag, WebhookDelivery
+from app.models import Backing, Commission, Order, Product, Profile, RiskFlag, WebhookDelivery
 from app.presenters import delivery_out, risk_out
 from app.schemas import RiskFlagOut, SalesOrder, SalesSummary, SalesTotals, WebhookDeliveryOut
 from app.security import mask_email
@@ -46,6 +46,10 @@ def get_sales(product_id: str, user: CurrentUserDep, db: DBDep) -> SalesSummary:
             ("held", "payable", "reserved", "submitted", "blocked")),
         commission_paid_cents=commission_sum(("paid",)),
     )
+    claimed = {order_id: at for order_id, at in db.execute(
+        select(Backing.order_id, Backing.claimed_at).where(
+            Backing.campaign_id == campaign.id, Backing.claimed_at.is_not(None))
+    ).all()}
     out = []
     for o in orders:
         buyer = db.get(Profile, o.buyer_id)
@@ -54,6 +58,7 @@ def get_sales(product_id: str, user: CurrentUserDep, db: DBDep) -> SalesSummary:
             id=o.id, kind=o.kind, state=o.state, buyer_label=label,  # type: ignore[arg-type]
             referral_code=o.referral_code, amount_cents=o.amount_cents,
             platform_fee_cents=o.platform_fee_cents, commission_cents=o.commission_cents,
+            access_claimed_at=iso(claimed.get(o.id)),
             created_at=iso(o.created_at) or "",
         ))
     return SalesSummary(totals=totals, orders=out)

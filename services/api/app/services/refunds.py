@@ -158,6 +158,7 @@ def apply_refund(db: Session, order: Order, *, refund_provider_id: str | None, s
             backing.status = "revoked"  # Badge number stays permanently assigned.
 
     buyer = db.get(Profile, order.buyer_id)
+    revoked = db.get(Backing, order.backing_id) if order.backing_id else None
     if product.webhook_url:
         enqueue_event(db, product, "refund.issued", {
             "product_id": product.id,
@@ -168,6 +169,7 @@ def apply_refund(db: Session, order: Order, *, refund_provider_id: str | None, s
             "amount_cents": order.amount_cents,
             "currency": order.currency,
             "refund_id": refund.id,
+            "claimed_by": revoked.claimed_by if revoked and revoked.order_id == order.id else None,
         }, order_id=order.id)
     audit(db, actor_id=None, action="order.refunded", target_type="order", target_id=order.id,
           details={"source": source})

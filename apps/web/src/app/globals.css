@@ -209,10 +209,18 @@
   margin-inline: auto;
   width: 100%;
   max-width: var(--container-6xl);
-  padding-inline: calc(var(--spacing) * 5);
+  padding-left: max(calc(var(--spacing) * 5), env(safe-area-inset-left));
+  padding-right: max(calc(var(--spacing) * 5), env(safe-area-inset-right));
   @media (width >= 40rem) {
-    padding-inline: calc(var(--spacing) * 8);
+    padding-left: max(calc(var(--spacing) * 8), env(safe-area-inset-left));
+    padding-right: max(calc(var(--spacing) * 8), env(safe-area-inset-right));
   }
+}
+
+/* Side gutters that clear the notch in landscape (needs viewport-fit=cover). */
+@utility safe-x {
+  padding-left: max(var(--gutter, 1rem), env(safe-area-inset-left));
+  padding-right: max(var(--gutter, 1rem), env(safe-area-inset-right));
 }
 
 @utility rise {

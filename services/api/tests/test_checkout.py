@@ -3,8 +3,30 @@ from typing import Any
 from sqlalchemy import func, select
 
 from app.models import Backing, Commission, LedgerEntry, Order
-from app.providers.paypal import CaptureResult, get_paypal
+from app.providers.paypal import CaptureResult, ReferralLink, get_paypal
 from app.services.checkout import finalize_capture
+
+
+def test_paypal_onboarding_returns_to_product_setup(client, auth, monkeypatch) -> None:
+    headers = auth("builder")
+    product = client.post("/v1/products", headers=headers, json={
+        "name": "Sandbox product", "url": "https://example.com",
+        "description": "Test onboarding", "access_terms": "Lifetime access",
+    }).json()
+    return_urls = []
+
+    def referral(*, tracking_id, return_url):
+        return_urls.append(return_url)
+        return ReferralLink(
+            action_url="https://www.sandbox.paypal.com/onboarding",
+            status="pending", merchant_id=None,
+        )
+
+    monkeypatch.setattr(get_paypal(), "create_referral_link", referral)
+    response = client.post(f"/v1/products/{product['id']}/paypal/onboarding", headers=headers)
+    assert response.status_code == 200
+    assert response.json()["status"] == "pending"
+    assert return_urls == [f"http://localhost:3000/app/products/{product['id']}?tab=setup"]
 
 
 def test_founding_purchase_assigns_badge_and_code(campaign: dict[str, Any], buy) -> None:

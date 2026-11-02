@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { ChevronsUpDownIcon, HandHeartIcon, HouseIcon, LogOutIcon, PlusIcon, RocketIcon, SettingsIcon } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { useEffect } from "react";
+import { ChevronsUpDownIcon, LogOutIcon, PlusIcon } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,53 +28,53 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { authClient } from "@/lib/auth-client";
-import { clearTokenCache } from "@/hooks/use-api";
+import { usePrefetch } from "@/hooks/use-api";
+import { initialsOf, isNavActive, mainNav as main, settingsNav, useSignOut } from "./app-nav";
 import { Wordmark } from "./wordmark";
-
-const main = [
-  { href: "/app", label: "Home", icon: HouseIcon, exact: true },
-  { href: "/app/products", label: "Campaigns", icon: RocketIcon },
-  { href: "/app/backings", label: "Backing", icon: HandHeartIcon },
-];
 
 export function AppSidebar({ name, email }: { name: string; email: string }) {
   const pathname = usePathname();
-  const router = useRouter();
   const { setOpenMobile } = useSidebar();
-  const initials = name.split(" ").map((p) => p[0]).join("").slice(0, 2).toUpperCase() || "?";
-  const isActive = (href: string, exact?: boolean) => (exact ? pathname === href : pathname.startsWith(href));
+  const signOut = useSignOut();
+  const prefetch = usePrefetch();
 
-  async function signOut() {
-    clearTokenCache();
-    await authClient.signOut();
-    router.push("/");
-    router.refresh();
-  }
+  useEffect(() => prefetch("/me"), [prefetch]);
+  const initials = initialsOf(name);
+  const isActive = (href: string, exact?: boolean) => isNavActive(pathname, href, exact);
 
   return (
     <Sidebar variant="inset">
-      <SidebarHeader className="gap-4 px-3 pt-4">
-        <Wordmark href="/app" />
+      <SidebarHeader className="gap-5 px-4 pt-5 pb-2">
+        <div className="px-3">
+          <Wordmark href="/app" />
+        </div>
         <Button
           render={<Link href="/app/products/new" onClick={() => setOpenMobile(false)} />}
           nativeButton={false}
-          className="w-full justify-start"
+          size="lg"
+          className="w-full"
         >
           <PlusIcon data-icon="inline-start" />
           New campaign
         </Button>
       </SidebarHeader>
-      <SidebarContent>
+      <SidebarContent className="gap-2 px-2">
         <SidebarGroup>
           <SidebarGroupContent>
-            <SidebarMenu>
+            <SidebarMenu className="gap-1">
               {main.map((l) => (
                 <SidebarMenuItem key={l.href}>
                   <SidebarMenuButton
-                    render={<Link href={l.href} onClick={() => setOpenMobile(false)} />}
+                    render={
+                      <Link
+                        href={l.href}
+                        onClick={() => setOpenMobile(false)}
+                        onPointerEnter={() => prefetch(...l.data)}
+                        onFocus={() => prefetch(...l.data)}
+                      />
+                    }
                     isActive={isActive(l.href, l.exact)}
-                    className="h-9 rounded-full px-3 transition-colors duration-150"
+                    className="h-10 gap-3 rounded-full px-3 transition-colors duration-150"
                   >
                     <l.icon />
                     <span>{l.label}</span>
@@ -84,24 +85,24 @@ export function AppSidebar({ name, email }: { name: string; email: string }) {
           </SidebarGroupContent>
         </SidebarGroup>
         <SidebarGroup>
-          <SidebarGroupLabel>Account</SidebarGroupLabel>
+          <SidebarGroupLabel className="px-3">Account</SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
+            <SidebarMenu className="gap-1">
               <SidebarMenuItem>
                 <SidebarMenuButton
-                  render={<Link href="/app/settings" onClick={() => setOpenMobile(false)} />}
-                  isActive={isActive("/app/settings")}
-                  className="h-9 rounded-full px-3 transition-colors duration-150"
+                  render={<Link href={settingsNav.href} onClick={() => setOpenMobile(false)} onPointerEnter={() => prefetch(...settingsNav.data)} />}
+                  isActive={isActive(settingsNav.href)}
+                  className="h-10 gap-3 rounded-full px-3 transition-colors duration-150"
                 >
-                  <SettingsIcon />
-                  <span>Settings</span>
+                  <settingsNav.icon />
+                  <span>{settingsNav.label}</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="p-3">
+      <SidebarFooter className="p-4">
         <DropdownMenu>
           <DropdownMenuTrigger
             render={<SidebarMenuButton size="lg" className="rounded-2xl" aria-label="Account menu" />}
@@ -124,10 +125,6 @@ export function AppSidebar({ name, email }: { name: string; email: string }) {
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem onClick={() => router.push("/app/settings")}>
-                <SettingsIcon />
-                Settings
-              </DropdownMenuItem>
               <DropdownMenuItem onClick={signOut}>
                 <LogOutIcon />
                 Sign out

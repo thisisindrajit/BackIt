@@ -6,6 +6,8 @@ import json
 import os
 import sqlite3
 import time
+import urllib.error
+import urllib.request
 from collections.abc import Iterator
 from contextlib import asynccontextmanager, contextmanager
 from datetime import UTC, datetime
@@ -27,6 +29,17 @@ def _secret() -> str:
     return secret
 
 
+def _backit_api() -> str:
+    return os.environ.get("BACKIT_API_URL", "http://localhost:8001").rstrip("/")
+
+
+def _product_id() -> str:
+    product_id = os.environ.get("BACKIT_PRODUCT_ID", "")
+    if not product_id:
+        raise HTTPException(status_code=503, detail="BACKIT_PRODUCT_ID is not configured")
+    return product_id
+
+
 def _db_path() -> Path:
     return Path(os.environ.get("DEMO_DB_PATH", Path(__file__).resolve().parents[1] / "demo.sqlite3"))
 
@@ -38,7 +51,8 @@ CREATE TABLE IF NOT EXISTS entitlements (
     plan_id TEXT,
     status TEXT NOT NULL CHECK (status IN ('active', 'revoked')),
     granted_at TEXT NOT NULL,
-    revoked_at TEXT
+    revoked_at TEXT,
+    claimed_by TEXT
 );
 CREATE TABLE IF NOT EXISTS events (
     event_id TEXT PRIMARY KEY,
@@ -64,6 +78,9 @@ def connect() -> Iterator[sqlite3.Connection]:
 def init_db() -> None:
     with connect() as conn:
         conn.executescript(SCHEMA)
+        columns = {r["name"] for r in conn.execute("PRAGMA table_info(entitlements)")}
+        if "claimed_by" not in columns:  # databases created before claim codes
+            conn.execute("ALTER TABLE entitlements ADD COLUMN claimed_by TEXT")
 
 
 def now_iso() -> str:
@@ -100,7 +117,7 @@ app = FastAPI(title="BackIt demo product", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=os.environ.get("CORS_ORIGINS", "http://localhost:3000").split(","),
-    allow_methods=["GET"],
+    allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
 
@@ -118,6 +135,39 @@ class Entitlement(BaseModel):
     status: str
     granted_at: str
     revoked_at: str | None
+    claimed_by: str | None = None
+
+
+class ClaimIn(BaseModel):
+    code: str
+    user_ref: str
+
+
+class ClaimOut(BaseModel):
+    status: str
+    order_id: str
+    plan_id: str
+    user_ref: str
+
+
+def redeem_with_backit(code: str, user_ref: str) -> dict[str, Any]:
+    """Server-to-server call; the webhook secret never reaches the browser."""
+    body = json.dumps({"product_id": _product_id(), "code": code, "user_ref": user_ref}).encode()
+    req = urllib.request.Request(  # noqa: S310 - URL comes from operator config
+        f"{_backit_api()}/v1/claims/redeem", data=body, method="POST",
+        headers={"Authorization": f"Bearer {_secret()}", "Content-Type": "application/json"},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=10) as res:  # noqa: S310
+            return json.loads(res.read())
+    except urllib.error.HTTPError as exc:
+        try:
+            message = json.loads(exc.read())["error"]["message"]
+        except (ValueError, KeyError, TypeError):
+            message = "BackIt rejected the code"
+        raise HTTPException(status_code=exc.code, detail=message) from exc
+    except urllib.error.URLError as exc:
+        raise HTTPException(status_code=502, detail="Can't reach BackIt") from exc
 
 
 class ProcessedEvent(BaseModel):
@@ -182,6 +232,20 @@ async def backit_webhook(
             (event_id, event_type, data.get("order_id"), outcome, now_iso()),
         )
     return WebhookAck(received=True, outcome=outcome)
+
+
+@app.post("/claims")
+def claim(body: ClaimIn) -> ClaimOut:
+    result = redeem_with_backit(body.code, body.user_ref)
+    with connect() as conn:
+        conn.execute(
+            """INSERT INTO entitlements (order_id, buyer_email, plan_id, status, granted_at, claimed_by)
+               VALUES (?, ?, ?, 'active', ?, ?)
+               ON CONFLICT(order_id) DO UPDATE SET claimed_by = excluded.claimed_by""",
+            (result["order_id"], result.get("buyer_email"), result["plan_id"], now_iso(), result["user_ref"]),
+        )
+    return ClaimOut(status=result["status"], order_id=result["order_id"], plan_id=result["plan_id"],
+                    user_ref=result["user_ref"])
 
 
 @app.get("/entitlements")

@@ -123,7 +123,7 @@ def start_onboarding(db: Session, user: Profile, product: Product,
     if conn.status == "connected":
         return conn
     return_url = (
-        f"{get_settings().web_base_url.rstrip('/')}/builder/products/{product.id}/onboarding/return"
+        f"{get_settings().web_base_url.rstrip('/')}/app/products/{product.id}?tab=setup"
     )
     try:
         link = paypal.create_referral_link(tracking_id=conn.tracking_id, return_url=return_url)

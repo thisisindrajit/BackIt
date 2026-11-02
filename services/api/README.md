@@ -18,6 +18,16 @@ uv run python -m app.workers.run --loop   # second terminal: outbox, webhooks, p
 
 `python -m app.workers.run --once` drains one round of work and exits.
 
+### Demo data
+
+Sign in to the web app once, then seed through the real API flows (PayPal mock, development only):
+
+```bash
+uv run python scripts/seed_demo.py --owner-email you@example.com          # --reset wipes app data first
+```
+
+You get Ledgerly (live, with sales, a refund, a paid payout and held rewards), Shipnote (draft) and Pagecraft (no campaign), plus backings in two `demo_*` builders' campaigns. Seeded activity is spread over the past ten weeks so the dashboard chart has history; run `uv run python scripts/seed_demo.py --backdate` to do that for data seeded before this existed.
+
 ## Tests and lint
 
 ```bash
@@ -34,6 +44,30 @@ Set `TEST_DB_SERVER`, `TEST_DB_USERNAME`, `TEST_DB_PASSWORD` or `TEST_DB_NAME` t
 - **PayPal** — `PAYPAL_MODE=mock` (default) runs checkout, refunds, onboarding and payouts locally. Mock IDs are prefixed `MOCK` and `provider` is `"mock"`. `PAYPAL_MODE=sandbox` with `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET` and `PAYPAL_WEBHOOK_ID` uses `https://api-m.sandbox.paypal.com`: Orders v2 with `platform_fees` and builder `payee.merchant_id`, Partner Referrals, webhook signature verification, and Payouts. Live endpoints are never called.
 - **AI** — with `OPENROUTER_API_KEY`, campaign drafts, share drafts and payout explanations call OpenRouter with JSON-schema output. Output is validated with Pydantic. On any failure the response falls back to a template (`source: "template"`). AI never computes money.
 - **Mock PayPal webhooks** — in development only, `POST /v1/webhooks/paypal` accepts events with the header `paypal-transmission-sig: mock`.
+
+### Local PayPal sandbox
+
+Create a **Platform** app in PayPal's sandbox Apps & Credentials. Enable Payouts,
+onboarding before payment, and platform fees. Keep its client ID and secret in the
+ignored `services/api/.env`, together with `PAYPAL_PARTNER_MERCHANT_ID` (the platform
+sandbox business account's Account ID) and `PAYPAL_BN_CODE`.
+
+For local ports 3001 (web) and 8001 (API), set `WEB_BASE_URL`, `CORS_ORIGINS`, and
+`AUTH_ISSUER` to `http://localhost:3001`, and `AUTH_JWKS_URL` to
+`http://localhost:3001/api/auth/jwks`. The web app's `BETTER_AUTH_URL` must match;
+`NEXT_PUBLIC_API_URL` should be `http://localhost:8001/v1`.
+
+Run `ngrok http http://localhost:8001` and register
+`https://<your-ngrok-host>/v1/webhooks/paypal` on the sandbox app. Subscribe to capture
+completed/denied/refunded/reversed, payout batch/item events, merchant onboarding
+completed, and partner consent revoked. Save the resulting `PAYPAL_WEBHOOK_ID`,
+set `PAYPAL_MODE=sandbox`, and restart the API and any worker processes.
+Keep the tunnel running while testing; update the webhook if its hostname changes.
+
+Mock demo sellers and transactions are not real sandbox records. Use a new product
+and **Connect PayPal** to onboard a sandbox seller, then **Refresh status** after
+returning to its Setup tab. Use a separate sandbox Personal account as the buyer.
+Do not use mock orders to test sandbox refunds or payouts.
 
 ## Layout
 
