@@ -93,3 +93,22 @@ docker run -p 8000:8000 --env-file .env backit-api                        # API
 docker run --env-file .env backit-api python -m app.workers.run --loop    # worker
 docker run --env-file .env backit-api alembic upgrade head                # migrations
 ```
+
+## Production (Google Cloud Run)
+
+Project `backit-512304`, region `us-central1`. `.gcloudignore` keeps `.env` out of the build upload.
+
+- **API:** Cloud Run service `backit-api`, mapped to `https://api.backit.club` (CNAME `api` → `ghs.googlehosted.com.`).
+- **Worker:** Cloud Run job `backit-worker` (`python -m app.workers.run --once`), triggered every minute by Cloud Scheduler job `backit-worker-every-minute`.
+- **Secrets (Secret Manager):** `db-username`, `db-password`, `app-encryption-key`, `paypal-client-id`, `paypal-client-secret`, `paypal-webhook-id`.
+- **PayPal webhook:** `https://api.backit.club/v1/webhooks/paypal` on the sandbox app.
+
+Redeploy after code changes:
+
+```bash
+gcloud run deploy backit-api --source . --region us-central1 --project backit-512304
+IMG=$(gcloud run services describe backit-api --region us-central1 --project backit-512304 --format='value(spec.template.spec.containers[0].image)')
+gcloud run jobs update backit-worker --image "$IMG" --region us-central1 --project backit-512304
+```
+
+Env vars and secret bindings persist across deploys; change them with `--update-env-vars` / `--update-secrets`.
