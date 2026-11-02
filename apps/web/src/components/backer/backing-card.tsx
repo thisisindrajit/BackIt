@@ -14,6 +14,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Stat } from "@/components/backit/stat";
 import { FoundingSeal } from "@/components/backit/founding-seal";
+import { RoleBadge, RoleInfo } from "@/components/backit/role-info";
 import { StatusBadge } from "@/components/backit/status-badge";
 import { CopyField } from "@/components/builder/secret-reveal";
 import { AccessCode } from "@/components/backer/access-code";
@@ -41,7 +42,10 @@ export function BackingCard({ backing: b }: { backing: Backing }) {
   }
 
   return (
-    <Card className="rounded-3xl">
+    <Card
+      id={`backing-${b.id}`}
+      className="scroll-mt-24 rounded-3xl transition-shadow duration-500 ease-(--ease-out) data-highlight:ring-3 data-highlight:ring-primary/60"
+    >
       <CardHeader>
         <CardTitle className="font-display text-2xl">{b.campaign.product_name}</CardTitle>
         <CardDescription>
@@ -54,9 +58,12 @@ export function BackingCard({ backing: b }: { backing: Backing }) {
         </CardDescription>
         <CardAction>
           {b.badge_number ? (
-            <FoundingSeal number={b.badge_number} size={72} className="pop-in" />
+            <span className="flex items-start gap-0.5">
+              <FoundingSeal number={b.badge_number} size={72} className="pop-in" />
+              <RoleInfo role="founding" className="text-muted-foreground" />
+            </span>
           ) : (
-            <Badge variant="outline">Referral buyer</Badge>
+            <RoleBadge role="referral" />
           )}
         </CardAction>
       </CardHeader>

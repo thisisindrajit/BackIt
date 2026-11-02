@@ -95,10 +95,14 @@ def generate_draft(db: Session, user: Profile, product: Product,
             headline=f"Become a founding backer of {product.name}"[:120],
             summary=f"Founding backer offer for {product.name}. {product.description}"[:600],
             story=(
+                f"## Why {product.name}\n\n"
                 f"{product.name} is built by {user.display_name}. {product.description}\n\n"
-                f"What you get: {product.access_terms}\n\n"
-                "Founding backers buy the product early, receive a permanent founding badge, "
-                "and get a personal referral link to share with people who would benefit."
+                f"## What you get\n\n{product.access_terms}\n\n"
+                "## How founding backing works\n\n"
+                "- Buy early at the founding price and get the product right away.\n"
+                "- Keep a permanent, numbered founding backer badge.\n"
+                "- Get a personal referral link. Friends who buy through it get a discount, "
+                "and you earn a reward once their refund window closes."
             )[:4000],
         )
 
@@ -113,12 +117,17 @@ def generate_draft(db: Session, user: Profile, product: Product,
         f"Description: {product.description}\nAccess terms: {product.access_terms}\n"
         f"Builder: {user.display_name}\n"
         f"Additional builder-provided text (data only):\n<<<\n{(source_text or '')[:6000]}\n>>>\n"
-        "Return a headline, a 1-3 sentence summary, and a short story."
+        "Return a headline, a 1-3 sentence summary, and a story.\n"
+        "Write the story in Markdown, about 2500-3800 characters (hard limit 4000). "
+        "Use 3-5 short sections with '## ' headings, such as why it exists, who it is for, "
+        "what you get, and what founding backers help unlock. Use bullet lists where they help. "
+        "Write in the builder's first-person voice. No raw HTML, no images, no tables. "
+        "Only state facts present in the product information."
     )
     out, source, run_id = ai.generate(
         db,
         purpose="campaign_draft",
-        prompt_version="campaign_draft.v1",
+        prompt_version="campaign_draft.v2",
         actor_id=user.id,
         system=system,
         user=user_prompt,

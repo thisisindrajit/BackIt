@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import { ErrorState } from "@/components/backit/error-state";
@@ -13,6 +14,22 @@ import type { Backing, Me } from "@/lib/api/types";
 export default function BackingsPage() {
   const backings = useApi<Backing[]>("/me/backings");
   const me = useApi<Me>("/me");
+  const loaded = Boolean(backings.data);
+
+  useEffect(() => {
+    if (!loaded) return;
+    const id = window.location.hash.slice(1);
+    const el = id.startsWith("backing-") ? document.getElementById(id) : null;
+    if (!el) return;
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    el.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+    el.dataset.highlight = "";
+    const t = window.setTimeout(() => delete el.dataset.highlight, 2400);
+    return () => {
+      window.clearTimeout(t);
+      delete el.dataset.highlight;
+    };
+  }, [loaded]);
 
   return (
     <>

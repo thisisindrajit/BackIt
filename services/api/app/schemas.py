@@ -240,12 +240,15 @@ class CampaignDraft(BaseModel):
     ai_run_id: str | None
 
 
+STORY_MAX_CHARS = 4000
+
+
 class CampaignCreate(StrictModel):
     product_id: str
     slug: Slug
     headline: Annotated[str, Field(min_length=1, max_length=160)]
     summary: Annotated[str, Field(min_length=1, max_length=1000)]
-    story: Annotated[str, Field(min_length=1, max_length=10000)]
+    story: Annotated[str, Field(min_length=1, max_length=STORY_MAX_CHARS)]
     founding_price_cents: PriceCents
     founding_spots_cap: Spots
     referral_list_price_cents: PriceCents
@@ -257,7 +260,7 @@ class CampaignUpdate(StrictModel):
     slug: Slug | None = None
     headline: Annotated[str, Field(min_length=1, max_length=160)] | None = None
     summary: Annotated[str, Field(min_length=1, max_length=1000)] | None = None
-    story: Annotated[str, Field(min_length=1, max_length=10000)] | None = None
+    story: Annotated[str, Field(min_length=1, max_length=STORY_MAX_CHARS)] | None = None
     founding_price_cents: PriceCents | None = None
     founding_spots_cap: Spots | None = None
     referral_list_price_cents: PriceCents | None = None

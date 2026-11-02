@@ -1,3 +1,4 @@
+# ruff: noqa: E501  (demo stories are long Markdown paragraphs)
 """Seed demo data through the real API flows (PayPal mock mode, template AI).
 
     uv run python scripts/seed_demo.py --owner-email you@example.com
@@ -59,6 +60,88 @@ class _Key:
 class _KeySource:
     def get_signing_key_from_jwt(self, token: str) -> _Key:
         return _Key(KEY.public_key())
+
+
+LEDGERLY_STORY = """## Why I built Ledgerly
+
+Every April I lost a full weekend to receipts. Stripe payouts in one tab, PayPal in another, a bank export that never matched either, and a spreadsheet held together with hope. I'm a solo founder, so there was no finance team to hand it to. I just wanted my books to be **done**.
+
+Ledgerly started as a script that pulled my Stripe and PayPal transactions into one place and sorted them. A few founder friends asked for a copy. Today it runs the books for 40 paying founders.
+
+## What it does
+
+- **Connects to Stripe and PayPal** and imports every charge, refund, fee and payout automatically.
+- **Sorts each transaction** into the categories your accountant expects, and learns from your corrections.
+- **Matches payouts to bank deposits** so you can see exactly where money is sitting.
+- **Exports a clean ledger** at tax time, as CSV or a PDF your accountant can read in five minutes.
+
+## Who it's for
+
+Solo founders and tiny teams selling software or digital products who don't want to learn accounting software built for 50-person companies. If you have ever typed "stripe fees tax deductible" into a search bar at midnight, it's for you.
+
+## What you get as a founding backer
+
+- **Lifetime access to Ledgerly Pro**, including every future update, for a one-time price.
+- A permanent, numbered **founding backer badge**.
+- A personal **referral link**. Friends who buy through it get a discount, and you earn a reward once their refund window closes.
+
+## What your backing unlocks
+
+Bank sync works today for the US and UK. Founding backers fund **bank sync for five more countries**: Canada, Australia, Germany, France and the Netherlands. I'll post progress on each one here as it ships.
+
+> Full refund within 30 days, no questions asked. If Ledgerly doesn't save you time, you shouldn't pay for it."""
+
+SHIPNOTE_STORY = """## Why Shipnote
+
+Release notes are the last thing anyone writes and the first thing users skip. Shipnote reads your merged pull requests and drafts notes people actually want to read.
+
+## What you get
+
+- **Lifetime access to the Team plan** for up to 10 seats.
+- A founding backer badge and your own referral link."""
+
+TALLYBOOK_STORY = """## How Tallybook started
+
+Tallybook started as a spreadsheet I shared with a few friends who were tired of chasing clients for money. It had one tab for invoices, one for reminders, and a lot of copy and paste. When more people asked for it than I could help by email, I turned it into a real app.
+
+## What it does
+
+- **Send invoices in minutes** from a template that looks good on every screen.
+- **Chase automatically.** Polite reminders go out before and after the due date, so you don't have to write awkward emails.
+- **Reconcile in one click** when a payment lands, so you always know who still owes you.
+
+## Who it's for
+
+Indie hackers, freelancers and small studios who send a handful of invoices a month and want them paid on time without a full accounting suite.
+
+## Founding backers get
+
+- **Lifetime access to Tallybook Pro** for a one-time price.
+- A permanent, numbered founding backer badge.
+- A referral link that gives friends a discount and earns you a reward for each one who buys.
+
+## What your backing unlocks
+
+Recurring invoices and multi-currency support are next on the roadmap. Founding backers fund both, and get them the day they ship."""
+
+SHIPLOG_STORY = """## Changelogs people actually read
+
+Most changelogs live on a page nobody visits. Shiplog puts a beautiful changelog **inside your product**, right where your users already are, so every release becomes a reason to come back.
+
+## What it does
+
+- **An embedded widget** that shows what's new without sending users to another site.
+- **Release posts with images and tags**, written in Markdown.
+- **Read tracking**, so you know which updates landed and which didn't.
+
+## Founding backers get
+
+- **Lifetime access to Shiplog Growth.**
+- A founding backer badge and a referral link that earns you a reward for every friend who buys.
+
+## What your backing unlocks
+
+Founding backers fund in-app announcements and email digests, so users who missed an update still hear about it."""
 
 
 def _fake_send(url: str, secret: str, key_version: int, event_id: str,
@@ -186,8 +269,7 @@ def seed(owner: Profile) -> None:
             me, ledgerly, "ledgerly", "Back Ledgerly and never dread tax season again",
             "Founding backers get lifetime Pro for a one-time price and earn a reward for every "
             "friend who buys.",
-            "I built Ledgerly after losing a weekend to receipts every April. It already runs the "
-            "books for 40 paying founders. Backing it now funds bank sync for five more countries.")
+            LEDGERLY_STORY)
         codes = [s.buy(lc["id"], s.backer(n))["backing"]["referral_code"] for n in range(1, 13)]
         # Early referrals clear the hold and get paid out; later ones stay on hold.
         for n, code in zip(range(13, 17), [codes[0], codes[0], codes[2], codes[4]], strict=True):
@@ -205,7 +287,7 @@ def seed(owner: Profile) -> None:
             refund_terms="Full refund within 30 days.")
         s.campaign(me, shipnote, "shipnote", "Back Shipnote: release notes people actually read",
                    "Founding backers lock in the Team plan for life.",
-                   "Shipnote turns merged pull requests into readable release notes.", publish=False)
+                   SHIPNOTE_STORY, publish=False)
 
         s.product(me, name="Pagecraft", url="https://pagecraft.example.com",
                   description="A landing page builder for indie apps, with built-in waitlists.",
@@ -221,7 +303,7 @@ def seed(owner: Profile) -> None:
             webhook_url="https://tallybook.example.com/webhooks/backit")
         tc = s.campaign(maya, tally, "tallybook", "Invoicing for indie hackers",
                         "Get paid faster with invoices that chase themselves.",
-                        "Tallybook started as a spreadsheet I shared with friends. Now it is a real app.")
+                        TALLYBOOK_STORY)
         for n in range(31, 37):
             s.buy(tc["id"], s.backer(n))
         my_code = s.buy(tc["id"], me)["backing"]["referral_code"]
@@ -239,7 +321,7 @@ def seed(owner: Profile) -> None:
             webhook_url="https://shiplog.example.com/webhooks/backit")
         sc = s.campaign(leo, shiplog, "shiplog", "Changelogs your users read",
                         "Turn every release into a reason for users to come back.",
-                        "Shiplog puts a beautiful changelog inside your product.")
+                        SHIPLOG_STORY)
         friend_code = s.buy(sc["id"], s.backer(51))["backing"]["referral_code"]
         for n in range(52, 55):
             s.buy(sc["id"], s.backer(n))
@@ -248,16 +330,45 @@ def seed(owner: Profile) -> None:
     app.dependency_overrides.clear()
 
 
+DEMO_STORIES = {"ledgerly": LEDGERLY_STORY, "shipnote": SHIPNOTE_STORY,
+                "tallybook": TALLYBOOK_STORY, "shiplog": SHIPLOG_STORY}
+
+
+def refresh_stories() -> None:
+    """Rewrite demo campaign stories in place, through the normal update service."""
+    from app.models import Campaign, Product
+    from app.schemas import CampaignUpdate
+    from app.services import campaigns as campaign_service
+
+    with SessionLocal() as db:
+        for slug, story in DEMO_STORIES.items():
+            campaign = db.scalar(select(Campaign).where(Campaign.slug == slug).with_for_update())
+            if campaign is None or campaign.story == story:
+                continue
+            product = db.get(Product, campaign.product_id)
+            owner = db.get(Profile, product.owner_id) if product else None
+            if owner is None:
+                continue
+            campaign_service.update_campaign(db, owner, campaign, CampaignUpdate(story=story))
+            print(f"Refreshed the {slug} story.")
+        db.commit()
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Seed BackIt demo data.")
     parser.add_argument("--owner-email", help="email of a profile that has signed in once")
     parser.add_argument("--reset", action="store_true", help="wipe BackIt app data before seeding")
     parser.add_argument("--backdate", action="store_true",
                         help="only spread existing demo data over the past ten weeks")
+    parser.add_argument("--refresh-stories", action="store_true",
+                        help="only rewrite demo campaign stories with the current Markdown copy")
     args = parser.parse_args()
 
     if get_settings().environment != "development":
         raise SystemExit("Refusing to seed outside ENVIRONMENT=development.")
+    if args.refresh_stories:
+        refresh_stories()
+        return
     if args.backdate:
         window = demo_window()
         if window is None:

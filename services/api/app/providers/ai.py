@@ -43,7 +43,7 @@ def _openrouter_call(system: str, user: str, schema: type[BaseModel], name: str)
             "json_schema": {"name": name, "strict": True, "schema": _strict_schema(schema)},
         },
         "temperature": 0.4,
-        "max_tokens": 1200,
+        "max_tokens": 2400,
     }
     headers = {
         "Authorization": f"Bearer {settings.openrouter_api_key}",

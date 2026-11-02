@@ -4,6 +4,7 @@ import { ArrowUpRightIcon } from "lucide-react";
 import { SiteFooter } from "@/components/backit/site-footer";
 import { SiteHeader } from "@/components/backit/site-header";
 import { BuyPanel } from "@/components/public/buy-panel";
+import { MarkdownStory } from "@/components/public/markdown";
 import { TrustCard } from "@/components/public/trust-card";
 import { getPublicCampaign } from "@/lib/api/server";
 import { getSession } from "@/lib/session";
@@ -53,7 +54,7 @@ export default async function CampaignPage({ params, searchParams }: PageProps<"
           <BuyPanel campaign={c} referralCode={c.referrer ? c.referrer.code : undefined} signedIn={Boolean(session)} />
         </aside>
         <article className="flex min-w-0 flex-col gap-8 md:col-start-1">
-          <div className="max-w-prose font-serif text-[1.1875rem] leading-[1.7] whitespace-pre-line">{c.story}</div>
+          <MarkdownStory className="max-w-prose font-serif text-[1.1875rem] leading-[1.7]">{c.story}</MarkdownStory>
           <TrustCard campaign={c} />
           <p className="text-sm">
             <Link href={`/${c.slug}/ledger`} className="text-link underline underline-offset-4">

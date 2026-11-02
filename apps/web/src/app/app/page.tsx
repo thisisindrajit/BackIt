@@ -1,11 +1,11 @@
 "use client";
 
-import { useMemo } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import { ErrorState } from "@/components/backit/error-state";
 import { FoundingSeal } from "@/components/backit/founding-seal";
+import { RoleBadge } from "@/components/backit/role-info";
 import { PageHeader } from "@/components/backit/page-header";
 import { NoCampaigns, ProductTile } from "@/components/backit/product-tile";
 import { PageHeaderSkeleton, RowCardSkeleton, TileGridSkeleton, tileGrid } from "@/components/backit/skeletons";
@@ -13,7 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { TopCampaigns } from "@/components/dashboard/top-campaigns";
 import { useApi, usePrefetch } from "@/hooks/use-api";
 import { money, shortDate } from "@/lib/format";
-import type { Activity, Me } from "@/lib/api/types";
+import type { Activity, Me, ProductSummary } from "@/lib/api/types";
 
 const EarningsChart = dynamic(() => import("@/components/dashboard/earnings-chart").then((m) => m.EarningsChart), {
   ssr: false,
@@ -21,7 +21,6 @@ const EarningsChart = dynamic(() => import("@/components/dashboard/earnings-char
 });
 
 const pulseGrid = "grid gap-5 xl:grid-cols-[minmax(0,2fr)_minmax(20rem,1fr)]";
-const noSlugs = new Set<string>();
 
 function ChartSkeleton() {
   return (
@@ -42,7 +41,7 @@ function ChartSkeleton() {
   );
 }
 
-function Pulse({ mine }: { mine: Set<string> }) {
+function Pulse({ products }: { products?: ProductSummary[] }) {
   const { data: activity, error, reload } = useApi<Activity>("/me/activity");
   return (
     <div className={pulseGrid}>
@@ -53,7 +52,7 @@ function Pulse({ mine }: { mine: Set<string> }) {
       ) : (
         <ChartSkeleton />
       )}
-      <TopCampaigns mine={mine} />
+      <TopCampaigns products={products} />
     </div>
   );
 }
@@ -61,17 +60,13 @@ function Pulse({ mine }: { mine: Set<string> }) {
 export default function OverviewPage() {
   const { data, error, reload } = useApi<Me>("/me");
   const prefetch = usePrefetch();
-  const mine = useMemo(
-    () => new Set(data?.products.flatMap((p) => (p.campaign ? [p.campaign.slug] : [])) ?? []),
-    [data],
-  );
 
   if (error) return <ErrorState error={error} onRetry={reload} />;
   if (!data) {
     return (
       <>
         <PageHeaderSkeleton />
-        <Pulse mine={noSlugs} />
+        <Pulse />
         <Section title="Your campaigns">
           <TileGridSkeleton />
         </Section>
@@ -95,7 +90,7 @@ export default function OverviewPage() {
         description="Run your own campaign, or keep track of the builders you back."
       />
 
-      <Pulse mine={mine} />
+      <Pulse products={data.products} />
 
       <Section title="Your campaigns">
         {data.products.length ? (
@@ -113,23 +108,29 @@ export default function OverviewPage() {
         {data.backings.length ? (
           <div className="grid gap-3 lg:grid-cols-2 2xl:grid-cols-3">
             {data.backings.map((b) => (
-              <Link
+              <div
                 key={b.id}
-                href="/app/backings"
-                onPointerEnter={() => prefetch("/me/backings")}
-                className="lift flex items-start gap-4 rounded-3xl bg-card p-4 shadow-soft ring-1 ring-foreground/[0.07] outline-none focus-visible:ring-3 focus-visible:ring-ring/50 sm:p-5"
+                className="lift relative flex items-start gap-4 rounded-3xl bg-card p-4 shadow-soft ring-1 ring-foreground/[0.07] has-[a:focus-visible]:ring-3 has-[a:focus-visible]:ring-ring/50 sm:p-5"
               >
                 <FoundingSeal number={b.badge_number ?? undefined} size={64} className="shrink-0" />
                 <span className="flex min-w-0 flex-1 flex-col gap-1">
-                  <span className="truncate font-heading text-lg">{b.product_name}</span>
+                  <Link
+                    href={`/app/backings#backing-${b.id}`}
+                    onPointerEnter={() => prefetch("/me/backings")}
+                    className="truncate font-heading text-lg outline-none after:absolute after:inset-0 after:rounded-3xl"
+                  >
+                    {b.product_name}
+                  </Link>
                   <span className="line-clamp-2 text-sm text-pretty text-foreground/75">{b.campaign_headline}</span>
                   <span className="truncate text-xs text-muted-foreground">
                     by {b.builder_name} · Backed {shortDate(b.backed_at)}
                   </span>
-                  <span className="mt-2 flex flex-wrap gap-2 text-xs">
-                    <span className="rounded-full bg-secondary px-2.5 py-1 text-secondary-foreground">
-                      {b.badge_number ? `Founding backer #${b.badge_number}` : "Referred customer"}
-                    </span>
+                  <span className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                    <RoleBadge
+                      role={b.badge_number ? "founding" : "referral"}
+                      label={b.badge_number ? `Founding backer #${b.badge_number}` : "Referral buyer"}
+                      className="relative z-10"
+                    />
                     <span className="tabular rounded-full bg-accent px-2.5 py-1 text-accent-foreground">
                       {b.referrals
                         ? `${b.referrals} ${b.referrals === 1 ? "referral" : "referrals"} · ${money(b.earned_cents)} earned`
@@ -137,7 +138,7 @@ export default function OverviewPage() {
                     </span>
                   </span>
                 </span>
-              </Link>
+              </div>
             ))}
           </div>
         ) : (

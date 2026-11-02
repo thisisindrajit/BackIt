@@ -15,7 +15,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { authedApi, useApi } from "@/hooks/use-api";
 import { ApiError, errorMessage } from "@/lib/api/client";
-import { dollarsToCents, percentToBps } from "@/lib/format";
+import { dollarsToCents, money, percentToBps } from "@/lib/format";
 import type { Campaign, CampaignDraft, Product, Readiness } from "@/lib/api/types";
 import { useAction } from "@/hooks/use-action";
 
@@ -122,6 +122,7 @@ function DraftStart({ product, onDraft }: { product: Product; onDraft: (d: Campa
 }
 
 function CampaignForm({ product, campaign, draft, onSaved }: { product: Product; campaign: Campaign | null; draft: CampaignDraft | null; onSaved: () => void }) {
+  const feeBps = product.campaign?.platform_fee_bps ?? 800;
   const [values, setValues] = useState<Values>(() =>
     campaign ? toValues(campaign, campaign.slug) : toValues(draft!, product.slug),
   );
@@ -203,8 +204,13 @@ function CampaignForm({ product, campaign, draft, onSaved }: { product: Product;
             </Field>
             <Field>
               <FieldLabel htmlFor="story">Story</FieldLabel>
-              <Textarea id="story" rows={6} value={values.story} onChange={set("story")} required maxLength={10000} />
-              <FieldDescription>Why you’re building this and what backers help unlock.</FieldDescription>
+              <Textarea id="story" rows={12} value={values.story} onChange={set("story")} required maxLength={STORY_MAX} className="min-h-64" />
+              <FieldDescription className="flex flex-wrap justify-between gap-x-4 gap-y-1">
+                <span>Why you’re building this, who it’s for, and what backers help unlock. Markdown supported: ## headings, **bold**, lists, links.</span>
+                <span className="tabular shrink-0">
+                  {values.story.length.toLocaleString()}/{STORY_MAX.toLocaleString()}
+                </span>
+              </FieldDescription>
             </Field>
             <FieldSet>
               <FieldLegend>Founding offer</FieldLegend>
@@ -225,7 +231,13 @@ function CampaignForm({ product, campaign, draft, onSaved }: { product: Product;
                 <PercentField id="referral_discount" label="Buyer discount" value={values.referral_discount} onChange={set("referral_discount")} disabled={locked} />
                 <PercentField id="commission" label="Backer commission" value={values.commission} onChange={set("commission")} disabled={locked} />
               </div>
-              <FieldDescription>Commission is paid on what the buyer actually pays. BackIt’s {product.campaign ? product.campaign.platform_fee_bps / 100 : 8}% fee comes out of each sale.</FieldDescription>
+              <FieldDescription>Commission is paid on what the buyer actually pays. BackIt’s {feeBps / 100}% fee comes out of each sale.</FieldDescription>
+              <ReferralExample
+                listCents={dollarsToCents(values.referral_list_price)}
+                discountBps={percentToBps(values.referral_discount)}
+                commissionBps={percentToBps(values.commission)}
+                feeBps={feeBps}
+              />
             </FieldSet>
             {draft?.disclosure ? <p className="text-sm text-muted-foreground">{draft.disclosure}</p> : null}
             <Button type="submit" className="self-start" disabled={pending}>
@@ -236,6 +248,28 @@ function CampaignForm({ product, campaign, draft, onSaved }: { product: Product;
         </form>
       </CardContent>
     </Card>
+  );
+}
+
+const STORY_MAX = 4000;
+
+const applyBps = (cents: number, bps: number) => Math.round((cents * bps) / 10000);
+
+function ReferralExample({ listCents, discountBps, commissionBps, feeBps }: { listCents: number; discountBps: number; commissionBps: number; feeBps: number }) {
+  if (![listCents, discountBps, commissionBps].every(Number.isFinite) || listCents <= 0) return null;
+  const paid = listCents - applyBps(listCents, discountBps);
+  const reward = applyBps(paid, commissionBps);
+  const fee = applyBps(paid, feeBps);
+  const kept = paid - reward - fee;
+  return (
+    <div className="flex flex-col gap-1.5 rounded-2xl bg-accent/70 px-4 py-3 text-sm text-accent-foreground">
+      <p className="font-medium">Example</p>
+      <p className="text-pretty">
+        A friend uses a backer’s link and pays <span className="tabular font-medium">{money(paid)}</span> instead of{" "}
+        <span className="tabular">{money(listCents)}</span>. The backer earns <span className="tabular font-medium">{money(reward)}</span>, BackIt takes{" "}
+        <span className="tabular">{money(fee)}</span>, and you keep <span className="tabular font-medium">{money(kept)}</span> before PayPal fees.
+      </p>
+    </div>
   );
 }
 

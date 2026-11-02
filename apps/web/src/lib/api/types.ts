@@ -5,6 +5,7 @@ export type PublicConfig = S["PublicConfig"];
 export type Me = S["Me"];
 export type Profile = S["ProfileOut"];
 export type Product = S["ProductOut"];
+export type ProductSummary = S["ProductSummary"];
 export type ProductCreated = S["ProductCreated"];
 export type Campaign = S["CampaignOut"];
 export type CampaignDraft = S["CampaignDraft"];

@@ -35,7 +35,7 @@ class Settings(BaseSettings):
     openrouter_api_key: str | None = None
     openrouter_model: str = "openai/gpt-4o-mini"
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
-    ai_timeout_seconds: float = 20.0
+    ai_timeout_seconds: float = 45.0
 
     # Used to encrypt builder webhook secrets at rest and to derive public ledger refs.
     app_encryption_key: str | None = None
