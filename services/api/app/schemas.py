@@ -187,6 +187,16 @@ class ProductCreated(ProductOut):
     webhook_secret: str
 
 
+class ProductFacts(StrictModel):
+    """Product details used by the AI helpers before the product is saved."""
+
+    name: Annotated[str, Field(min_length=1, max_length=120)]
+    url: HttpUrl | None = None
+    description: Annotated[str, Field(min_length=1, max_length=5000)]
+    access_terms: Annotated[str, Field(max_length=2000)] = ""
+    refund_terms: Annotated[str, Field(max_length=2000)] | None = None
+
+
 class ProductCreate(StrictModel):
     name: Annotated[str, Field(min_length=1, max_length=120)]
     url: HttpUrl
@@ -194,6 +204,7 @@ class ProductCreate(StrictModel):
     access_terms: Annotated[str, Field(min_length=1, max_length=2000)]
     refund_terms: Annotated[str, Field(max_length=2000)] | None = None
     webhook_url: HttpUrl | None = None
+    campaign: "CampaignFields | None" = None
 
 
 class ProductUpdate(StrictModel):
@@ -226,6 +237,26 @@ class CampaignDraftIn(StrictModel):
 
 
 class OfferSuggestionIn(StrictModel):
+    notes: Annotated[str, Field(max_length=4000)] | None = None
+    list_price_cents: PriceCents | None = None
+
+
+class OfferTerms(StrictModel):
+    founding_price_cents: PriceCents
+    founding_spots_cap: Spots
+    referral_list_price_cents: PriceCents
+    referral_discount_bps: RateBps
+    commission_bps: RateBps
+
+
+class NewCampaignDraftIn(StrictModel):
+    product: ProductFacts
+    offer: OfferTerms | None = None
+    source_text: Annotated[str, Field(max_length=8000)] | None = None
+
+
+class NewOfferSuggestionIn(StrictModel):
+    product: ProductFacts
     notes: Annotated[str, Field(max_length=4000)] | None = None
     list_price_cents: PriceCents | None = None
 
@@ -278,8 +309,7 @@ class CampaignDraft(BaseModel):
 STORY_MAX_CHARS = 4000
 
 
-class CampaignCreate(StrictModel):
-    product_id: str
+class CampaignFields(StrictModel):
     slug: Slug
     headline: Annotated[str, Field(min_length=1, max_length=160)]
     summary: Annotated[str, Field(min_length=1, max_length=1000)]
@@ -289,6 +319,10 @@ class CampaignCreate(StrictModel):
     referral_list_price_cents: PriceCents
     referral_discount_bps: RateBps
     commission_bps: RateBps
+
+
+class CampaignCreate(CampaignFields):
+    product_id: str
 
 
 class CampaignUpdate(StrictModel):
@@ -691,3 +725,6 @@ class ReleasedOut(BaseModel):
 
 class AckOut(BaseModel):
     received: bool
+
+
+ProductCreate.model_rebuild()

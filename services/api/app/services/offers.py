@@ -15,7 +15,7 @@ from app.models import Product, Profile
 from app.money import format_usd, offer_problems, quote_founding, quote_referral
 from app.presenters import latest_verification
 from app.providers import ai
-from app.schemas import OfferProjection, OfferReasons, OfferSuggestion
+from app.schemas import OfferProjection, OfferReasons, OfferSuggestion, ProductFacts
 from app.services.campaigns import DEFAULT_OFFER, PRICE_FIELDS
 from app.services.common import campaign_for_product
 
@@ -44,7 +44,7 @@ def _charm(cents: int) -> int:
     return dollars * 100
 
 
-def _guess_list_price(product: Product, notes: str | None, hint: int | None) -> int:
+def _guess_list_price(product: Product | ProductFacts, notes: str | None, hint: int | None) -> int:
     if hint:
         return hint
     for text in (notes or "", product.description, product.access_terms):
@@ -82,15 +82,16 @@ def projection(offer: dict[str, int], fee_bps: int) -> OfferProjection:
     )
 
 
-def suggest_offer(db: Session, user: Profile, product: Product, notes: str | None,
+def suggest_offer(db: Session, user: Profile, product: Product | ProductFacts, notes: str | None,
                   list_price_hint: int | None) -> OfferSuggestion:
     fee_bps = get_settings().platform_fee_bps
-    existing = campaign_for_product(db, product.id)
+    saved = isinstance(product, Product)
+    existing = campaign_for_product(db, product.id) if saved else None
     current = {f: getattr(existing, f) for f in PRICE_FIELDS} if existing else None
     if list_price_hint is None and current:
         list_price_hint = current["referral_list_price_cents"]
     list_price = _guess_list_price(product, notes, list_price_hint)
-    mrr = _avg_monthly_revenue(db, product.id)
+    mrr = _avg_monthly_revenue(db, product.id) if saved else None
 
     def valid(o: dict[str, int]) -> bool:
         return not offer_problems(o["founding_price_cents"], o["referral_list_price_cents"],

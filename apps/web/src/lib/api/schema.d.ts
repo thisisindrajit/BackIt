@@ -93,6 +93,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/products/campaign-draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Draft New Campaign
+         * @description Draft campaign copy from unsaved product details, for the one-step new-campaign page.
+         */
+        post: operations["draft_new_campaign_v1_products_campaign_draft_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/products/offer-suggestion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Suggest New Offer
+         * @description AI-suggested offer from unsaved product details.
+         */
+        post: operations["suggest_new_offer_v1_products_offer_suggestion_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/products/{product_id}": {
         parameters: {
             query?: never;
@@ -830,8 +870,6 @@ export interface components {
         };
         /** CampaignCreate */
         CampaignCreate: {
-            /** Product Id */
-            product_id: string;
             /** Slug */
             slug: string;
             /** Headline */
@@ -850,6 +888,8 @@ export interface components {
             referral_discount_bps: number;
             /** Commission Bps */
             commission_bps: number;
+            /** Product Id */
+            product_id: string;
         };
         /** CampaignDraft */
         CampaignDraft: {
@@ -885,6 +925,27 @@ export interface components {
         CampaignDraftIn: {
             /** Source Text */
             source_text?: string | null;
+        };
+        /** CampaignFields */
+        CampaignFields: {
+            /** Slug */
+            slug: string;
+            /** Headline */
+            headline: string;
+            /** Summary */
+            summary: string;
+            /** Story */
+            story: string;
+            /** Founding Price Cents */
+            founding_price_cents: number;
+            /** Founding Spots Cap */
+            founding_spots_cap: number;
+            /** Referral List Price Cents */
+            referral_list_price_cents: number;
+            /** Referral Discount Bps */
+            referral_discount_bps: number;
+            /** Commission Bps */
+            commission_bps: number;
         };
         /** CampaignOut */
         CampaignOut: {
@@ -1101,6 +1162,21 @@ export interface components {
             /** Backings */
             backings: components["schemas"]["BackingSummary"][];
         };
+        /** NewCampaignDraftIn */
+        NewCampaignDraftIn: {
+            product: components["schemas"]["ProductFacts"];
+            offer?: components["schemas"]["OfferTerms"] | null;
+            /** Source Text */
+            source_text?: string | null;
+        };
+        /** NewOfferSuggestionIn */
+        NewOfferSuggestionIn: {
+            product: components["schemas"]["ProductFacts"];
+            /** Notes */
+            notes?: string | null;
+            /** List Price Cents */
+            list_price_cents?: number | null;
+        };
         /** OfferProjection */
         OfferProjection: {
             /** Founding Keep Cents */
@@ -1159,6 +1235,19 @@ export interface components {
             notes?: string | null;
             /** List Price Cents */
             list_price_cents?: number | null;
+        };
+        /** OfferTerms */
+        OfferTerms: {
+            /** Founding Price Cents */
+            founding_price_cents: number;
+            /** Founding Spots Cap */
+            founding_spots_cap: number;
+            /** Referral List Price Cents */
+            referral_list_price_cents: number;
+            /** Referral Discount Bps */
+            referral_discount_bps: number;
+            /** Commission Bps */
+            commission_bps: number;
         };
         /** OnboardingOut */
         OnboardingOut: {
@@ -1369,6 +1458,7 @@ export interface components {
             refund_terms?: string | null;
             /** Webhook Url */
             webhook_url?: string | null;
+            campaign?: components["schemas"]["CampaignFields"] | null;
         };
         /** ProductCreated */
         ProductCreated: {
@@ -1397,6 +1487,25 @@ export interface components {
             created_at: string;
             /** Webhook Secret */
             webhook_secret: string;
+        };
+        /**
+         * ProductFacts
+         * @description Product details used by the AI helpers before the product is saved.
+         */
+        ProductFacts: {
+            /** Name */
+            name: string;
+            /** Url */
+            url?: string | null;
+            /** Description */
+            description: string;
+            /**
+             * Access Terms
+             * @default
+             */
+            access_terms: string;
+            /** Refund Terms */
+            refund_terms?: string | null;
         };
         /** ProductOut */
         ProductOut: {
@@ -1991,6 +2100,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProductCreated"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    draft_new_campaign_v1_products_campaign_draft_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewCampaignDraftIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignDraft"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    suggest_new_offer_v1_products_offer_suggestion_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewOfferSuggestionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfferSuggestion"];
                 };
             };
             /** @description Validation Error */

@@ -61,7 +61,7 @@ export function NoCampaigns() {
       <EmptyHeader>
         <EmptyTitle>No campaigns yet</EmptyTitle>
         <EmptyDescription>
-          Add your product and we’ll help you draft a founding-backer offer. <span className="max-md:hidden">Start with New campaign in the sidebar.</span>
+          Set up your product, founding offer and story in one step, with AI help. <span className="max-md:hidden">Start with New campaign in the sidebar.</span>
         </EmptyDescription>
       </EmptyHeader>
       <EmptyContent className="md:hidden">

@@ -15,52 +15,21 @@ import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { authedApi, useApi } from "@/hooks/use-api";
 import { ApiError, errorMessage } from "@/lib/api/client";
-import { dollarsToCents, money, percentToBps } from "@/lib/format";
+import { dollarsToCents, percentToBps } from "@/lib/format";
 import type { Campaign, CampaignDraft, OfferSuggestion, Product, Readiness } from "@/lib/api/types";
 import { useAction } from "@/hooks/use-action";
-
-type Values = {
-  slug: string;
-  headline: string;
-  summary: string;
-  story: string;
-  founding_price: string;
-  founding_spots_cap: string;
-  referral_list_price: string;
-  referral_discount: string;
-  commission: string;
-};
-
-const fromCents = (c: number) => (c / 100).toString();
-const fromBps = (b: number) => (b / 100).toString();
-
-function toValues(c: Pick<Campaign, "headline" | "summary" | "story" | "founding_price_cents" | "founding_spots_cap" | "referral_list_price_cents" | "referral_discount_bps" | "commission_bps">, slug: string): Values {
-  return {
-    slug,
-    headline: c.headline,
-    summary: c.summary,
-    story: c.story,
-    founding_price: fromCents(c.founding_price_cents),
-    founding_spots_cap: String(c.founding_spots_cap),
-    referral_list_price: fromCents(c.referral_list_price_cents),
-    referral_discount: fromBps(c.referral_discount_bps),
-    commission: fromBps(c.commission_bps),
-  };
-}
-
-function toBody(v: Values) {
-  return {
-    slug: v.slug.trim().toLowerCase(),
-    headline: v.headline.trim(),
-    summary: v.summary.trim(),
-    story: v.story.trim(),
-    founding_price_cents: dollarsToCents(v.founding_price),
-    founding_spots_cap: Number(v.founding_spots_cap),
-    referral_list_price_cents: dollarsToCents(v.referral_list_price),
-    referral_discount_bps: percentToBps(v.referral_discount),
-    commission_bps: percentToBps(v.commission),
-  };
-}
+import {
+  fromBps,
+  fromCents,
+  MoneyField,
+  OfferAdvisor,
+  PercentField,
+  ReferralExample,
+  STORY_MAX,
+  toBody,
+  toValues,
+  type Values,
+} from "./campaign-fields";
 
 export function CampaignTab({ product, onChange }: { product: Product; onChange: () => void }) {
   const campaign = product.campaign;
@@ -215,9 +184,16 @@ function CampaignForm({ product, campaign, draft, onSaved }: { product: Product;
             </Field>
             {locked ? null : (
               <OfferAdvisor
-                productId={product.id}
-                notes={[product.description, values.summary].filter(Boolean).join("\n\n")}
-                listCents={dollarsToCents(values.referral_list_price)}
+                request={() => {
+                  const listCents = dollarsToCents(values.referral_list_price);
+                  return authedApi<OfferSuggestion>(`/products/${product.id}/offer-suggestion`, {
+                    method: "POST",
+                    body: {
+                      notes: [product.description, values.summary].filter(Boolean).join("\n\n").slice(0, 2000) || null,
+                      list_price_cents: Number.isFinite(listCents) && listCents >= 100 ? listCents : null,
+                    },
+                  });
+                }}
                 onApply={(o) =>
                   setValues((v) => ({
                     ...v,
@@ -266,146 +242,6 @@ function CampaignForm({ product, campaign, draft, onSaved }: { product: Product;
         </form>
       </CardContent>
     </Card>
-  );
-}
-
-const STORY_MAX = 4000;
-
-function OfferAdvisor({ productId, notes, listCents, onApply }: { productId: string; notes: string; listCents: number; onApply: (o: OfferSuggestion) => void }) {
-  const [idea, setIdea] = useState<OfferSuggestion | null>(null);
-  const { pending, run } = useAction();
-
-  async function suggest() {
-    const res = await run("suggest", () =>
-      authedApi<OfferSuggestion>(`/products/${productId}/offer-suggestion`, {
-        method: "POST",
-        body: { notes: notes.slice(0, 2000) || null, list_price_cents: Number.isFinite(listCents) && listCents > 0 ? listCents : null },
-      }),
-    );
-    if (res) setIdea(res);
-  }
-
-  if (!idea) {
-    return (
-      <div className="flex flex-col gap-3 rounded-lg border border-dashed p-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-col gap-0.5">
-          <span className="text-sm font-medium">Not sure what to charge?</span>
-          <span className="text-sm text-muted-foreground">The offer advisor suggests prices, spots and commission from your product and verified revenue.</span>
-        </div>
-        <Button type="button" variant="outline" className="shrink-0" onClick={suggest} disabled={pending === "suggest"}>
-          {pending === "suggest" ? <Spinner data-icon="inline-start" /> : <SparklesIcon data-icon="inline-start" />}
-          Suggest an offer
-        </Button>
-      </div>
-    );
-  }
-
-  const p = idea.projection;
-  const rows: [string, string, string][] = [
-    ["Founding price", money(idea.founding_price_cents), idea.reasons.founding_price],
-    ["Spots", String(idea.founding_spots_cap), idea.reasons.spots],
-    ["List price", money(idea.referral_list_price_cents), idea.reasons.list_price],
-    ["Buyer discount", pct(idea.referral_discount_bps), idea.reasons.discount],
-    ["Backer commission", pct(idea.commission_bps), idea.reasons.commission],
-  ];
-
-  return (
-    <div className="flex flex-col gap-4 rounded-lg bg-muted p-4">
-      <div className="flex flex-wrap items-center gap-2 text-sm font-medium">
-        <SparklesIcon className="size-4" />
-        Suggested offer
-        <Badge variant="outline">{idea.source === "ai" ? "AI" : "Template"}</Badge>
-      </div>
-      <dl className="flex flex-col divide-y divide-border rounded-md border bg-background text-sm">
-        {rows.map(([label, value, reason]) => (
-          <div key={label} className="grid gap-x-4 gap-y-0.5 px-3 py-2 sm:grid-cols-[9rem_5rem_1fr]">
-            <dt className="text-muted-foreground">{label}</dt>
-            <dd className="tabular">{value}</dd>
-            <dd className="text-muted-foreground">{reason}</dd>
-          </div>
-        ))}
-      </dl>
-      <p className="text-sm">
-        If all {idea.founding_spots_cap} spots sell you keep <span className="tabular">{money(p.all_spots_keep_cents)}</span>. If each backer brings one friend, you keep{" "}
-        <span className="tabular">{money(p.one_friend_each_keep_cents)}</span> and backers earn <span className="tabular">{money(p.one_friend_each_backers_cents)}</span>.
-      </p>
-      <div className="flex flex-wrap gap-2">
-        <Button
-          type="button"
-          onClick={() => {
-            onApply(idea);
-            toast.success("Offer applied. Review it, then save.");
-          }}
-        >
-          <CheckIcon data-icon="inline-start" />
-          Apply
-        </Button>
-        <Button type="button" variant="ghost" onClick={suggest} disabled={pending === "suggest"}>
-          {pending === "suggest" ? <Spinner data-icon="inline-start" /> : null}
-          Try again
-        </Button>
-        <Button type="button" variant="ghost" onClick={() => setIdea(null)}>
-          Dismiss
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-const applyBps = (cents: number, bps: number) => Math.round((cents * bps) / 10000);
-
-const pct = (bps: number) => `${+(bps / 100).toFixed(2)}%`;
-
-function ReferralExample({ listCents, discountBps, commissionBps, feeBps }: { listCents: number; discountBps: number; commissionBps: number; feeBps: number }) {
-  if (![listCents, discountBps, commissionBps].every(Number.isFinite) || listCents <= 0) return null;
-  const paid = listCents - applyBps(listCents, discountBps);
-  const reward = applyBps(paid, commissionBps);
-  const fee = applyBps(paid, feeBps);
-  const kept = paid - reward - fee;
-  return (
-    <div className="flex flex-col gap-1.5 rounded-2xl bg-accent/70 px-4 py-3 text-sm text-accent-foreground">
-      <p className="font-medium">Example</p>
-      <ul className="tabular flex flex-wrap gap-1.5 text-xs">
-        <li className="rounded-full bg-background/70 px-2.5 py-1">List price {money(listCents)}</li>
-        <li className="rounded-full bg-background/70 px-2.5 py-1">Buyer discount {pct(discountBps)}</li>
-        <li className="rounded-full bg-background/70 px-2.5 py-1">Backer commission {pct(commissionBps)}</li>
-        <li className="rounded-full bg-background/70 px-2.5 py-1">BackIt fee {pct(feeBps)}</li>
-      </ul>
-      <p className="text-pretty">
-        A friend uses a backer’s link and pays <span className="tabular font-medium">{money(paid)}</span> instead of{" "}
-        <span className="tabular">{money(listCents)}</span>. The backer earns <span className="tabular font-medium">{money(reward)}</span>{" "}
-        <span className="tabular">({pct(commissionBps)} of {money(paid)})</span>, BackIt takes <span className="tabular">{money(fee)}</span>{" "}
-        <span className="tabular">({pct(feeBps)} of {money(paid)})</span>, and you keep <span className="tabular font-medium">{money(kept)}</span> before PayPal fees.
-      </p>
-    </div>
-  );
-}
-
-function MoneyField({ id, label, ...props }: { id: string; label: string; value: string; onChange: React.ChangeEventHandler<HTMLInputElement>; disabled?: boolean }) {
-  return (
-    <Field>
-      <FieldLabel htmlFor={id}>{label}</FieldLabel>
-      <InputGroup>
-        <InputGroupAddon>
-          <InputGroupText>$</InputGroupText>
-        </InputGroupAddon>
-        <InputGroupInput id={id} inputMode="decimal" required {...props} />
-      </InputGroup>
-    </Field>
-  );
-}
-
-function PercentField({ id, label, ...props }: { id: string; label: string; value: string; onChange: React.ChangeEventHandler<HTMLInputElement>; disabled?: boolean }) {
-  return (
-    <Field>
-      <FieldLabel htmlFor={id}>{label}</FieldLabel>
-      <InputGroup>
-        <InputGroupInput id={id} inputMode="decimal" required {...props} />
-        <InputGroupAddon align="inline-end">
-          <InputGroupText>%</InputGroupText>
-        </InputGroupAddon>
-      </InputGroup>
-    </Field>
   );
 }
 

@@ -6,6 +6,8 @@ from app.schemas import (
     CampaignDraft,
     CampaignDraftIn,
     DemoVerificationIn,
+    NewCampaignDraftIn,
+    NewOfferSuggestionIn,
     OfferSuggestion,
     OfferSuggestionIn,
     OnboardingOut,
@@ -32,6 +34,19 @@ router = APIRouter(prefix="/products", tags=["products"])
 def create_product(body: ProductCreate, user: CurrentUserDep, db: DBDep) -> ProductCreated:
     product, secret = product_service.create_product(db, user, body)
     return ProductCreated(**product_out(db, product).model_dump(), webhook_secret=secret)
+
+
+@router.post("/campaign-draft")
+def draft_new_campaign(body: NewCampaignDraftIn, user: CurrentUserDep, db: DBDep) -> CampaignDraft:
+    """Draft campaign copy from unsaved product details, for the one-step new-campaign page."""
+    offer = body.offer.model_dump() if body.offer else None
+    return campaign_service.generate_draft(db, user, body.product, body.source_text, offer)
+
+
+@router.post("/offer-suggestion")
+def suggest_new_offer(body: NewOfferSuggestionIn, user: CurrentUserDep, db: DBDep) -> OfferSuggestion:
+    """AI-suggested offer from unsaved product details."""
+    return offer_service.suggest_offer(db, user, body.product, body.notes, body.list_price_cents)
 
 
 @router.get("/{product_id}")

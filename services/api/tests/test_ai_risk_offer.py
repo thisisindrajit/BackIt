@@ -107,3 +107,38 @@ def test_offer_suggestion_reads_price_from_notes(client, auth) -> None:
     assert s["founding_price_cents"] == 4900
     assert client.post(f"/v1/products/{product['id']}/offer-suggestion", headers=auth("intruder"),
                        json={}).status_code in (403, 404)
+
+
+PRODUCT = {
+    "name": "Shipnote", "url": "https://shipnote.example.com", "description": "Changelogs for indie devs.",
+    "access_terms": "Lifetime Pro", "refund_terms": "30-day refund", "webhook_url": None,
+}
+
+
+def test_one_step_new_campaign(client, auth, db) -> None:
+    h = auth("onestep", "one@example.com", "Ona Step")
+    facts = {k: PRODUCT[k] for k in ("name", "url", "description", "access_terms", "refund_terms")}
+    idea = client.post("/v1/products/offer-suggestion", headers=h,
+                       json={"product": facts, "notes": "Pro is $59 a year"}).json()
+    assert idea["referral_list_price_cents"] == 5900 and idea["source"] == "template"
+    offer = {k: idea[k] for k in ("founding_price_cents", "founding_spots_cap", "referral_list_price_cents",
+                                  "referral_discount_bps", "commission_bps")}
+    draft = client.post("/v1/products/campaign-draft", headers=h, json={"product": facts, "offer": offer}).json()
+    assert "$39" in draft["story"] and draft["missing_evidence"] == []
+    assert draft["founding_price_cents"] == offer["founding_price_cents"]
+
+    campaign = {"slug": "shipnote", "headline": draft["headline"], "summary": draft["summary"],
+                "story": draft["story"], **offer}
+    r = client.post("/v1/products", headers=h, json={**PRODUCT, "campaign": campaign})
+    assert r.status_code == 201, r.text
+    product = r.json()
+    assert product["webhook_secret"] and product["campaign"]["slug"] == "shipnote"
+    assert product["campaign"]["status"] == "draft"
+
+    # A taken address or invalid offer saves nothing.
+    before = client.get("/v1/me", headers=h).json()
+    r = client.post("/v1/products", headers=h, json={**PRODUCT, "campaign": campaign})
+    assert r.status_code == 409 and r.json()["error"]["code"] == "slug_taken"
+    bad = {**campaign, "slug": "shipnote-2", "commission_bps": 6000}
+    assert client.post("/v1/products", headers=h, json={**PRODUCT, "campaign": bad}).status_code == 422
+    assert client.get("/v1/me", headers=h).json() == before

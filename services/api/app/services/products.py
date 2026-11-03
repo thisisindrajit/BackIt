@@ -3,6 +3,7 @@ import secrets
 from datetime import UTC, datetime
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
@@ -13,7 +14,8 @@ from app.presenters import default_provider, seller_connection
 from app.providers.paypal import PayPalProvider, ProviderError
 from app.schemas import ProductCreate, ProductUpdate
 from app.security import encrypt_secret, new_webhook_secret
-from app.services.common import audit
+from app.services import campaigns as campaign_service
+from app.services.common import audit, conflict
 from app.webhooks_out import UnsafeDestination, validate_destination
 
 VERIFICATION_THRESHOLD_CENTS = 100_000
@@ -43,6 +45,9 @@ def _check_webhook_url(url: str | None) -> str | None:
 
 
 def create_product(db: Session, user: Profile, body: ProductCreate) -> tuple[Product, str]:
+    """Create a product, and its draft campaign in the same transaction when one is given."""
+    if body.campaign:
+        campaign_service.validate_new_campaign(db, body.campaign)
     secret = new_webhook_secret()
     product = Product(
         id=new_id("prod"),
@@ -60,7 +65,14 @@ def create_product(db: Session, user: Profile, body: ProductCreate) -> tuple[Pro
     )
     db.add(product)
     audit(db, actor_id=user.id, action="product.created", target_type="product", target_id=product.id)
-    db.commit()
+    if body.campaign:
+        db.flush()
+        campaign_service.add_campaign(db, user, product, body.campaign)
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise conflict("slug_taken", "That campaign address is already taken") from exc
     return product, secret
 
 
