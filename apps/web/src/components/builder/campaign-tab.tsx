@@ -16,7 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { authedApi, useApi } from "@/hooks/use-api";
 import { ApiError, errorMessage } from "@/lib/api/client";
 import { dollarsToCents, money, percentToBps } from "@/lib/format";
-import type { Campaign, CampaignDraft, Product, Readiness } from "@/lib/api/types";
+import type { Campaign, CampaignDraft, OfferSuggestion, Product, Readiness } from "@/lib/api/types";
 import { useAction } from "@/hooks/use-action";
 
 type Values = {
@@ -213,6 +213,23 @@ function CampaignForm({ product, campaign, draft, onSaved }: { product: Product;
                 </span>
               </FieldDescription>
             </Field>
+            {locked ? null : (
+              <OfferAdvisor
+                productId={product.id}
+                notes={[product.description, values.summary].filter(Boolean).join("\n\n")}
+                listCents={dollarsToCents(values.referral_list_price)}
+                onApply={(o) =>
+                  setValues((v) => ({
+                    ...v,
+                    founding_price: fromCents(o.founding_price_cents),
+                    founding_spots_cap: String(o.founding_spots_cap),
+                    referral_list_price: fromCents(o.referral_list_price_cents),
+                    referral_discount: fromBps(o.referral_discount_bps),
+                    commission: fromBps(o.commission_bps),
+                  }))
+                }
+              />
+            )}
             <FieldSet>
               <FieldLegend>Founding offer</FieldLegend>
               <FieldDescription>Founding backers pay once, get a permanent numbered badge, and a referral link.</FieldDescription>
@@ -253,6 +270,87 @@ function CampaignForm({ product, campaign, draft, onSaved }: { product: Product;
 }
 
 const STORY_MAX = 4000;
+
+function OfferAdvisor({ productId, notes, listCents, onApply }: { productId: string; notes: string; listCents: number; onApply: (o: OfferSuggestion) => void }) {
+  const [idea, setIdea] = useState<OfferSuggestion | null>(null);
+  const { pending, run } = useAction();
+
+  async function suggest() {
+    const res = await run("suggest", () =>
+      authedApi<OfferSuggestion>(`/products/${productId}/offer-suggestion`, {
+        method: "POST",
+        body: { notes: notes.slice(0, 2000) || null, list_price_cents: Number.isFinite(listCents) && listCents > 0 ? listCents : null },
+      }),
+    );
+    if (res) setIdea(res);
+  }
+
+  if (!idea) {
+    return (
+      <div className="flex flex-col gap-3 rounded-lg border border-dashed p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-0.5">
+          <span className="text-sm font-medium">Not sure what to charge?</span>
+          <span className="text-sm text-muted-foreground">The offer advisor suggests prices, spots and commission from your product and verified revenue.</span>
+        </div>
+        <Button type="button" variant="outline" className="shrink-0" onClick={suggest} disabled={pending === "suggest"}>
+          {pending === "suggest" ? <Spinner data-icon="inline-start" /> : <SparklesIcon data-icon="inline-start" />}
+          Suggest an offer
+        </Button>
+      </div>
+    );
+  }
+
+  const p = idea.projection;
+  const rows: [string, string, string][] = [
+    ["Founding price", money(idea.founding_price_cents), idea.reasons.founding_price],
+    ["Spots", String(idea.founding_spots_cap), idea.reasons.spots],
+    ["List price", money(idea.referral_list_price_cents), idea.reasons.list_price],
+    ["Buyer discount", pct(idea.referral_discount_bps), idea.reasons.discount],
+    ["Backer commission", pct(idea.commission_bps), idea.reasons.commission],
+  ];
+
+  return (
+    <div className="flex flex-col gap-4 rounded-lg bg-muted p-4">
+      <div className="flex flex-wrap items-center gap-2 text-sm font-medium">
+        <SparklesIcon className="size-4" />
+        Suggested offer
+        <Badge variant="outline">{idea.source === "ai" ? "AI" : "Template"}</Badge>
+      </div>
+      <dl className="flex flex-col divide-y divide-border rounded-md border bg-background text-sm">
+        {rows.map(([label, value, reason]) => (
+          <div key={label} className="grid gap-x-4 gap-y-0.5 px-3 py-2 sm:grid-cols-[9rem_5rem_1fr]">
+            <dt className="text-muted-foreground">{label}</dt>
+            <dd className="tabular">{value}</dd>
+            <dd className="text-muted-foreground">{reason}</dd>
+          </div>
+        ))}
+      </dl>
+      <p className="text-sm">
+        If all {idea.founding_spots_cap} spots sell you keep <span className="tabular">{money(p.all_spots_keep_cents)}</span>. If each backer brings one friend, you keep{" "}
+        <span className="tabular">{money(p.one_friend_each_keep_cents)}</span> and backers earn <span className="tabular">{money(p.one_friend_each_backers_cents)}</span>.
+      </p>
+      <div className="flex flex-wrap gap-2">
+        <Button
+          type="button"
+          onClick={() => {
+            onApply(idea);
+            toast.success("Offer applied. Review it, then save.");
+          }}
+        >
+          <CheckIcon data-icon="inline-start" />
+          Apply
+        </Button>
+        <Button type="button" variant="ghost" onClick={suggest} disabled={pending === "suggest"}>
+          {pending === "suggest" ? <Spinner data-icon="inline-start" /> : null}
+          Try again
+        </Button>
+        <Button type="button" variant="ghost" onClick={() => setIdea(null)}>
+          Dismiss
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 const applyBps = (cents: number, bps: number) => Math.round((cents * bps) / 10000);
 

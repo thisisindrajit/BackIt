@@ -2,9 +2,9 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 const tone: Record<string, "done" | "wait" | "bad" | "neutral"> = {
-  verified: "done", active: "done", revoked: "bad", completed: "done", delivered: "done", paid: "done", success: "done", connected: "done", published: "done", payable: "done",
+  verified: "done", active: "done", revoked: "bad", completed: "done", delivered: "done", paid: "done", success: "done", connected: "done", published: "done", payable: "done", cleared: "done",
   created: "wait", pending: "wait", pending_provider: "wait", held: "wait", reserved: "wait", submitted: "wait", queued: "wait", processing: "wait", open: "wait", draft: "wait", unclaimed: "wait",
-  failed: "bad", dead: "bad", refunded: "bad", reversed: "bad", blocked: "bad", returned: "bad", stale: "bad", expired: "bad", cancelled: "bad", partial: "bad",
+  failed: "bad", dead: "bad", refunded: "bad", reversed: "bad", blocked: "bad", returned: "bad", stale: "bad", expired: "bad", cancelled: "bad", partial: "bad", confirmed: "bad",
 };
 
 const label: Record<string, string> = {

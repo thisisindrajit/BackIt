@@ -24,3 +24,5 @@ export type RiskFlag = S["RiskFlagOut"];
 export type PayoutPreview = S["PayoutPreviewOut"];
 export type PayoutBatch = S["PayoutBatchOut"];
 export type Activity = S["Activity"];
+export type RiskAssessment = S["RiskAssessmentOut"];
+export type OfferSuggestion = S["OfferSuggestion"];

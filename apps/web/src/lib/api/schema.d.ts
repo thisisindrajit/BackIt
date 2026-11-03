@@ -196,6 +196,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/products/{product_id}/offer-suggestion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Suggest Offer
+         * @description AI-suggested founding and referral terms, validated and projected server-side.
+         */
+        post: operations["suggest_offer_v1_products__product_id__offer_suggestion_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/products/{product_id}/campaign-draft": {
         parameters: {
             query?: never;
@@ -503,6 +523,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/risk-flags/{flag_id}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Decide Risk Flag */
+        post: operations["decide_risk_flag_v1_risk_flags__flag_id__decision_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/claims/redeem": {
         parameters: {
             query?: never;
@@ -553,6 +590,26 @@ export interface paths {
         get: operations["get_payout_preview_v1_payout_previews__preview_id__get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/payout-previews/{preview_id}/hold": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Hold Backer
+         * @description Hold one backer out of the payout. Returns a fresh preview without them.
+         */
+        post: operations["hold_backer_v1_payout_previews__preview_id__hold_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -983,6 +1040,14 @@ export interface components {
              */
             source: "ai" | "template";
         };
+        /** FlagDecisionIn */
+        FlagDecisionIn: {
+            /**
+             * Decision
+             * @enum {string}
+             */
+            decision: "clear" | "confirm";
+        };
         /** Funding */
         Funding: {
             /**
@@ -1001,6 +1066,11 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** HoldBackerIn */
+        HoldBackerIn: {
+            /** Backing Id */
+            backing_id: string;
         };
         /** LedgerItem */
         LedgerItem: {
@@ -1030,6 +1100,65 @@ export interface components {
             products: components["schemas"]["ProductSummary"][];
             /** Backings */
             backings: components["schemas"]["BackingSummary"][];
+        };
+        /** OfferProjection */
+        OfferProjection: {
+            /** Founding Keep Cents */
+            founding_keep_cents: number;
+            /** All Spots Keep Cents */
+            all_spots_keep_cents: number;
+            /** Friend Pays Cents */
+            friend_pays_cents: number;
+            /** Backer Earns Cents */
+            backer_earns_cents: number;
+            /** Referral Keep Cents */
+            referral_keep_cents: number;
+            /** One Friend Each Keep Cents */
+            one_friend_each_keep_cents: number;
+            /** One Friend Each Backers Cents */
+            one_friend_each_backers_cents: number;
+        };
+        /** OfferReasons */
+        OfferReasons: {
+            /** Founding Price */
+            founding_price: string;
+            /** Spots */
+            spots: string;
+            /** List Price */
+            list_price: string;
+            /** Discount */
+            discount: string;
+            /** Commission */
+            commission: string;
+        };
+        /** OfferSuggestion */
+        OfferSuggestion: {
+            /** Founding Price Cents */
+            founding_price_cents: number;
+            /** Founding Spots Cap */
+            founding_spots_cap: number;
+            /** Referral List Price Cents */
+            referral_list_price_cents: number;
+            /** Referral Discount Bps */
+            referral_discount_bps: number;
+            /** Commission Bps */
+            commission_bps: number;
+            /** Platform Fee Bps */
+            platform_fee_bps: number;
+            reasons: components["schemas"]["OfferReasons"];
+            projection: components["schemas"]["OfferProjection"];
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "ai" | "template";
+        };
+        /** OfferSuggestionIn */
+        OfferSuggestionIn: {
+            /** Notes */
+            notes?: string | null;
+            /** List Price Cents */
+            list_price_cents?: number | null;
         };
         /** OnboardingOut */
         OnboardingOut: {
@@ -1188,6 +1317,8 @@ export interface components {
             exclusions: components["schemas"]["PreviewExclusion"][];
             funding: components["schemas"]["Funding"];
             explanation: components["schemas"]["Explanation"];
+            /** Risk Source */
+            risk_source: ("ai" | "template") | null;
             /** Created At */
             created_at: string;
             /** Expires At */
@@ -1219,6 +1350,7 @@ export interface components {
             amount_cents: number;
             /** Commission Ids */
             commission_ids: string[];
+            risk?: components["schemas"]["RiskAssessmentOut"] | null;
         };
         /** ProductCreate */
         ProductCreate: {
@@ -1502,6 +1634,23 @@ export interface components {
             /** Released */
             released: number;
         };
+        /** RiskAssessmentOut */
+        RiskAssessmentOut: {
+            /**
+             * Level
+             * @enum {string}
+             */
+            level: "low" | "medium" | "high";
+            /**
+             * Recommendation
+             * @enum {string}
+             */
+            recommendation: "pay" | "hold";
+            /** Summary */
+            summary: string;
+            /** Signals */
+            signals: string[];
+        };
         /** RiskFlagOut */
         RiskFlagOut: {
             /** Id */
@@ -1520,6 +1669,8 @@ export interface components {
             explanation: string | null;
             /** Created At */
             created_at: string;
+            /** Decided At */
+            decided_at?: string | null;
         };
         /** SalesOrder */
         SalesOrder: {
@@ -2065,6 +2216,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WebhookDeliveryOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    suggest_offer_v1_products__product_id__offer_suggestion_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                product_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OfferSuggestionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfferSuggestion"];
                 };
             };
             /** @description Validation Error */
@@ -2717,6 +2903,41 @@ export interface operations {
             };
         };
     };
+    decide_risk_flag_v1_risk_flags__flag_id__decision_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                flag_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FlagDecisionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RiskFlagOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     redeem_v1_claims_redeem_post: {
         parameters: {
             query?: never;
@@ -2796,6 +3017,41 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PayoutPreviewOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    hold_backer_v1_payout_previews__preview_id__hold_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                preview_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HoldBackerIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -22,6 +22,15 @@ export function WebhooksTab({ productId }: { productId: string }) {
     if (res) deliveries.reload();
   }
 
+  async function decide(id: string, decision: "clear" | "confirm") {
+    const res = await run(
+      `${decision}-${id}`,
+      () => authedApi<RiskFlag>(`/risk-flags/${id}/decision`, { method: "POST", body: { decision } }),
+      decision === "clear" ? "Cleared. Commissions return to the next payout." : "Confirmed. Those commissions stay blocked.",
+    );
+    if (res) flags.reload();
+  }
+
   return (
     <div className="flex flex-col gap-10">
       <section className="flex flex-col gap-3">
@@ -81,7 +90,9 @@ export function WebhooksTab({ productId }: { productId: string }) {
       <section className="flex flex-col gap-3">
         <div className="flex flex-col gap-1">
           <h2 className="text-2xl">Review flags</h2>
-          <p className="text-sm text-muted-foreground">Rule-based checks such as self-referral. Flagged commissions are held from payouts until reviewed.</p>
+          <p className="text-sm text-muted-foreground">
+            Rule checks like self-referral, plus backers you held after the risk review. Clear to pay them, or confirm to keep their commissions blocked.
+          </p>
         </div>
         {!flags.data && !flags.error ? (
           <Skeleton className="h-16 rounded-lg" aria-hidden />
@@ -95,6 +106,24 @@ export function WebhooksTab({ productId }: { productId: string }) {
                   <span className="text-xs text-muted-foreground">{f.severity} severity</span>
                 </div>
                 {f.explanation ? <p className="text-sm text-muted-foreground">{f.explanation}</p> : null}
+                {typeof f.evidence.ai_summary === "string" ? (
+                  <p className="text-sm">
+                    <span className="text-muted-foreground">Risk review: </span>
+                    {f.evidence.ai_summary}
+                  </p>
+                ) : null}
+                {f.status === "open" ? (
+                  <div className="flex gap-2 pt-1">
+                    <Button size="sm" variant="outline" onClick={() => decide(f.id, "clear")} disabled={pending !== null}>
+                      Clear and pay
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => decide(f.id, "confirm")} disabled={pending !== null}>
+                      Confirm and block
+                    </Button>
+                  </div>
+                ) : f.decided_at ? (
+                  <span className="text-xs text-muted-foreground">Decided {shortDate(f.decided_at)}</span>
+                ) : null}
               </li>
             ))}
           </ul>

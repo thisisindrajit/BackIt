@@ -33,8 +33,9 @@ from app.providers import ai
 from app.providers.paypal import PayoutBatchResult, PayoutItemRequest, PayPalProvider, ProviderError
 from app.schemas import ApproveIn
 from app.security import mask_email, public_ref, sha256_hex
+from app.services import risk_review
 from app.services.common import audit, campaign_for_product, conflict, owned_product
-from app.services.ledger import append_ledger
+from app.services.ledger import append_ledger, raise_flag
 from app.services.refunds import release_matured_holds
 
 
@@ -249,6 +250,7 @@ def create_preview(db: Session, user: Profile, product: Product) -> PayoutPrevie
     )
     elig = compute_eligibility(db, product)
     text, source, run_id = _explain(db, user, elig)
+    assessments, risk_source = risk_review.review(db, user.id, elig.items)
     preview = PayoutPreview(
         id=new_id("pp"),
         product_id=product.id,
@@ -263,6 +265,8 @@ def create_preview(db: Session, user: Profile, product: Product) -> PayoutPrevie
         explanation_text=text,
         explanation_source=source,
         ai_run_id=run_id,
+        risk_review=assessments,
+        risk_source=risk_source,
         created_at=now,
         expires_at=now + timedelta(minutes=get_settings().payout_preview_ttl_minutes),
     )
@@ -294,6 +298,37 @@ def owned_preview(db: Session, user: Profile, preview_id: str, *, lock: bool = F
             select(PayoutPreview).where(PayoutPreview.id == preview_id).with_for_update()
         ).one()
     return preview, product
+
+
+def hold_backer(db: Session, user: Profile, preview_id: str, backing_id: str) -> PayoutPreview:
+    """Builder holds one backer out of this payout: raises a flag, then rebuilds the preview."""
+    preview, product = owned_preview(db, user, preview_id, lock=True)
+    if preview.status != "open":
+        raise conflict("preview_not_open", "This preview is no longer open. Refresh it first.")
+    if backing_id not in {i["backing_id"] for i in preview.items}:
+        raise not_found("Backer in this preview")
+    assessment = next((a for a in preview.risk_review or [] if a["backing_id"] == backing_id), None)
+    level = assessment["level"] if assessment else "medium"
+    campaign = campaign_for_product(db, product.id)
+    raise_flag(
+        db,
+        product_id=product.id,
+        campaign_id=campaign.id if campaign else None,
+        backing_id=backing_id,
+        rule="builder_hold",
+        subject_key=f"hold:{backing_id}:{preview.id}",
+        severity=level,
+        evidence={
+            "preview_ref": preview.id,
+            "ai_summary": assessment["summary"] if assessment else None,
+            "signals": assessment["signals"] if assessment else [],
+            "review_source": preview.risk_source,
+        },
+    )
+    audit(db, actor_id=user.id, action="payout.backer_held", target_type="backing",
+          target_id=backing_id, details={"preview_id": preview.id, "level": level})
+    db.flush()
+    return create_preview(db, user, product)
 
 
 def approve(db: Session, user: Profile, preview_id: str, body: ApproveIn) -> PayoutBatch:

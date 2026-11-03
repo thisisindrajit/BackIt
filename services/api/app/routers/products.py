@@ -6,6 +6,8 @@ from app.schemas import (
     CampaignDraft,
     CampaignDraftIn,
     DemoVerificationIn,
+    OfferSuggestion,
+    OfferSuggestionIn,
     OnboardingOut,
     ProductCreate,
     ProductCreated,
@@ -17,6 +19,7 @@ from app.schemas import (
     WebhookSecretOut,
 )
 from app.services import campaigns as campaign_service
+from app.services import offers as offer_service
 from app.services import products as product_service
 from app.services.common import owned_product
 from app.services.deliveries import deliver_now
@@ -86,6 +89,15 @@ def send_webhook_test(product_id: str, user: CurrentUserDep, db: DBDep) -> Webho
     db.commit()
     delivery = deliver_now(db, delivery.id) or delivery
     return delivery_out(delivery)
+
+
+@router.post("/{product_id}/offer-suggestion")
+def suggest_offer(
+    product_id: str, body: OfferSuggestionIn, user: CurrentUserDep, db: DBDep
+) -> OfferSuggestion:
+    """AI-suggested founding and referral terms, validated and projected server-side."""
+    product = owned_product(db, product_id, user)
+    return offer_service.suggest_offer(db, user, product, body.notes, body.list_price_cents)
 
 
 @router.post("/{product_id}/campaign-draft")

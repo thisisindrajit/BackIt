@@ -6,8 +6,9 @@ from app.errors import forbidden, not_found
 from app.ids import iso, utcnow
 from app.models import Backing, Commission, Order, Product, Profile, RiskFlag, WebhookDelivery
 from app.presenters import delivery_out, risk_out
-from app.schemas import RiskFlagOut, SalesOrder, SalesSummary, SalesTotals, WebhookDeliveryOut
+from app.schemas import FlagDecisionIn, RiskFlagOut, SalesOrder, SalesSummary, SalesTotals, WebhookDeliveryOut
 from app.security import mask_email
+from app.services import risk as risk_service
 from app.services.common import audit, campaign_for_product, owned_product
 from app.services.deliveries import deliver_now
 
@@ -106,3 +107,8 @@ def list_risk_flags(product_id: str, user: CurrentUserDep, db: DBDep) -> list[Ri
         .order_by(RiskFlag.created_at.desc())
     ).all()
     return [risk_out(r) for r in rows]
+
+
+@router.post("/risk-flags/{flag_id}/decision")
+def decide_risk_flag(flag_id: str, body: FlagDecisionIn, user: CurrentUserDep, db: DBDep) -> RiskFlagOut:
+    return risk_out(risk_service.decide_flag(db, user, flag_id, body.decision))

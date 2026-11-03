@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { SparklesIcon } from "lucide-react";
+import { PauseIcon, ShieldCheckIcon, SparklesIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,7 +18,7 @@ import { authedApi, useApi } from "@/hooks/use-api";
 import { CardsSkeleton } from "@/components/backit/skeletons";
 import { useConfig } from "@/hooks/use-config";
 import { money, shortDate } from "@/lib/format";
-import type { PayoutBatch, PayoutPreview } from "@/lib/api/types";
+import type { PayoutBatch, PayoutPreview, RiskAssessment } from "@/lib/api/types";
 import { ConfirmDialog } from "./confirm-dialog";
 import { useAction } from "@/hooks/use-action";
 
@@ -62,6 +62,19 @@ export function PayoutsTab({ productId }: { productId: string }) {
     if (batch) {
       setPreview(null);
       batches.reload();
+    }
+  }
+
+  async function hold(backingId: string, name: string) {
+    if (!preview) return;
+    const p = await run(
+      `hold-${backingId}`,
+      () => authedApi<PayoutPreview>(`/payout-previews/${preview.id}/hold`, { method: "POST", body: { backing_id: backingId } }),
+      `${name} held for review. Decide under Webhooks → Review flags.`,
+    );
+    if (p) {
+      setPreview(p);
+      setFunding(false);
     }
   }
 
@@ -112,6 +125,30 @@ export function PayoutsTab({ productId }: { productId: string }) {
               </div>
               <p className="text-sm">{preview.explanation.text}</p>
             </div>
+            {preview.items.length ? (
+              <div className="flex flex-col gap-2">
+                <div className="flex flex-wrap items-center gap-2 text-sm font-medium">
+                  <ShieldCheckIcon className="size-4" />
+                  Risk review
+                  <Badge variant="outline">{preview.risk_source === "ai" ? "AI" : "Rules"}</Badge>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Each backer’s referral pattern is checked before money moves. The review only recommends; you decide who gets held.
+                </p>
+                <ul className="flex flex-col divide-y rounded-lg border">
+                  {preview.items.map((i) => (
+                    <RiskRow
+                      key={i.backing_id}
+                      name={i.backer_name}
+                      risk={i.risk ?? null}
+                      pending={pending === `hold-${i.backing_id}`}
+                      disabled={preview.status !== "open"}
+                      onHold={() => hold(i.backing_id, i.backer_name)}
+                    />
+                  ))}
+                </ul>
+              </div>
+            ) : null}
             {preview.items.length ? (
               <Table>
                 <TableHeader>
@@ -244,5 +281,61 @@ export function PayoutsTab({ productId }: { productId: string }) {
         )}
       </section>
     </div>
+  );
+}
+
+const levelTone: Record<RiskAssessment["level"], string> = {
+  low: "border-transparent bg-secondary text-secondary-foreground",
+  medium: "border-transparent bg-accent text-accent-foreground",
+  high: "border-transparent bg-destructive/10 text-destructive",
+};
+
+function RiskRow({
+  name,
+  risk,
+  pending,
+  disabled,
+  onHold,
+}: {
+  name: string;
+  risk: RiskAssessment | null;
+  pending: boolean;
+  disabled: boolean;
+  onHold: () => void;
+}) {
+  return (
+    <li className="flex flex-col gap-2 p-3 sm:flex-row sm:items-start sm:justify-between">
+      <div className="flex min-w-0 flex-col gap-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="font-medium">{name}</span>
+          {risk ? (
+            <Badge variant="outline" className={`capitalize ${levelTone[risk.level]}`}>
+              {risk.level} risk
+            </Badge>
+          ) : null}
+          {risk?.recommendation === "hold" ? <span className="text-xs text-destructive">Suggests holding</span> : null}
+        </div>
+        {risk ? <p className="text-sm text-muted-foreground">{risk.summary}</p> : null}
+        {risk?.signals.length ? (
+          <ul className="flex flex-wrap gap-1.5">
+            {risk.signals.map((s) => (
+              <li key={s} className="rounded-md bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                {s}
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </div>
+      <Button
+        variant={risk?.recommendation === "hold" ? "outline" : "ghost"}
+        size="sm"
+        className="shrink-0 self-start"
+        onClick={onHold}
+        disabled={pending || disabled}
+      >
+        {pending ? <Spinner data-icon="inline-start" /> : <PauseIcon data-icon="inline-start" />}
+        Hold
+      </Button>
+    </li>
   );
 }

@@ -32,6 +32,10 @@ RULE_EXPLANATIONS = {
         "A second founding payment was captured for a buyer who already holds a founding badge. "
         "Refund the duplicate payment."
     ),
+    "builder_hold": (
+        "You held this backer out of a payout after the risk review. Clear the flag to include them "
+        "in the next payout, or confirm it to block these commissions."
+    ),
     "refund_after_payout": (
         "This order was refunded after its commission was submitted or paid. PayPal payouts "
         "cannot be pulled back automatically; recover the amount manually."

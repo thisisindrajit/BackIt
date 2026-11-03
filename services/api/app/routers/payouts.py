@@ -4,7 +4,7 @@ from sqlalchemy import select
 from app.deps import CurrentUserDep, DBDep, IdempotencyKeyHeader
 from app.models import PayoutBatch
 from app.presenters import batch_out, preview_out
-from app.schemas import ApproveIn, PayoutBatchOut, PayoutPreviewOut, ReleasedOut
+from app.schemas import ApproveIn, HoldBackerIn, PayoutBatchOut, PayoutPreviewOut, ReleasedOut
 from app.services import payouts
 from app.services.common import owned_product
 from app.services.idempotency import run_idempotent
@@ -22,6 +22,12 @@ def create_payout_preview(product_id: str, user: CurrentUserDep, db: DBDep) -> P
 def get_payout_preview(preview_id: str, user: CurrentUserDep, db: DBDep) -> PayoutPreviewOut:
     preview, product = payouts.owned_preview(db, user, preview_id)
     return preview_out(payouts.refresh_preview(db, preview, product))
+
+
+@router.post("/payout-previews/{preview_id}/hold", status_code=status.HTTP_201_CREATED)
+def hold_backer(preview_id: str, body: HoldBackerIn, user: CurrentUserDep, db: DBDep) -> PayoutPreviewOut:
+    """Hold one backer out of the payout. Returns a fresh preview without them."""
+    return preview_out(payouts.hold_backer(db, user, preview_id, body.backing_id))
 
 
 @router.post("/payout-previews/{preview_id}/approve", status_code=status.HTTP_201_CREATED)

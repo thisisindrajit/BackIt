@@ -39,6 +39,7 @@ from app.schemas import (
     PreviewItem,
     ProductOut,
     ProfileOut,
+    RiskAssessmentOut,
     RiskFlagOut,
     SellerConnectionOut,
     VerificationMonth,
@@ -308,10 +309,12 @@ def risk_out(r: RiskFlag) -> RiskFlagOut:
         evidence=r.evidence,
         explanation=r.explanation,
         created_at=iso(r.created_at) or "",
+        decided_at=iso(r.decided_at),
     )
 
 
 def preview_out(p: PayoutPreview) -> PayoutPreviewOut:
+    risk = {a["backing_id"]: a for a in p.risk_review or []}
     return PayoutPreviewOut(
         id=p.id,
         product_id=p.product_id,
@@ -326,12 +329,15 @@ def preview_out(p: PayoutPreview) -> PayoutPreviewOut:
                 payout_email_masked=i["payout_email_masked"],
                 amount_cents=i["amount_cents"],
                 commission_ids=i["commission_ids"],
+                risk=RiskAssessmentOut(**{k: v for k, v in risk[i["backing_id"]].items() if k != "backing_id"})
+                if i["backing_id"] in risk else None,
             )
             for i in p.items
         ],
         exclusions=[PreviewExclusion(**e) for e in p.exclusions],
         funding=Funding(**p.funding),
         explanation=Explanation(text=p.explanation_text, source=p.explanation_source),  # type: ignore[arg-type]
+        risk_source=p.risk_source,  # type: ignore[arg-type]
         created_at=iso(p.created_at) or "",
         expires_at=iso(p.expires_at) or "",
     )

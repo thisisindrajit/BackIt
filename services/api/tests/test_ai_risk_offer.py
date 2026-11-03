@@ -1,0 +1,109 @@
+from typing import Any
+
+from sqlalchemy import select
+
+from app.models import Commission
+from app.services.risk_review import rule_assessment
+from tests.conftest import OFFER
+from tests.test_refunds_payouts import _ready_for_payout
+
+
+def _signals(**overrides: Any) -> dict[str, Any]:
+    base = {
+        "referred_sales": 3, "refunded_sales": 0, "unique_buyers": 3, "repeat_payer_accounts": 0,
+        "sales_last_24h": 1, "fastest_gap_minutes": 600.0, "buyers_with_new_accounts": 0,
+        "first_sale_minutes_after_backing": 2000, "open_flags": 0,
+    }
+    return {**base, **overrides}
+
+
+def test_rule_floor_levels() -> None:
+    assert rule_assessment(_signals()) == ("low", [])
+    level, reasons = rule_assessment(_signals(sales_last_24h=6, fastest_gap_minutes=0.5))
+    assert level == "medium" and len(reasons) == 2
+    assert rule_assessment(_signals(refunded_sales=2))[0] == "high"
+    assert rule_assessment(_signals(buyers_with_new_accounts=3))[0] == "medium"
+
+
+def test_preview_includes_risk_review(client, campaign, buy) -> None:
+    pid = _ready_for_payout(client, campaign, buy)
+    preview = client.post(f"/v1/products/{pid}/payout-previews", headers=campaign["headers"]).json()
+    assert preview["risk_source"] == "template"
+    risk = preview["items"][0]["risk"]
+    # Alice's single referred sale was bought by a buyer who signed up minutes earlier in the test.
+    assert risk["level"] in ("low", "medium")
+    assert risk["recommendation"] == "pay"
+    assert risk["summary"]
+
+
+def test_hold_then_clear_and_confirm(client, campaign, buy, db, auth) -> None:
+    pid = _ready_for_payout(client, campaign, buy)
+    h = campaign["headers"]
+    preview = client.post(f"/v1/products/{pid}/payout-previews", headers=h).json()
+    backing_id = preview["items"][0]["backing_id"]
+
+    r = client.post(f"/v1/payout-previews/{preview['id']}/hold", headers=h, json={"backing_id": backing_id})
+    assert r.status_code == 201, r.text
+    fresh = r.json()
+    assert fresh["items"] == []
+    assert [e["reason"] for e in fresh["exclusions"]] == ["risk_review"]
+    assert client.get(f"/v1/payout-previews/{preview['id']}", headers=h).json()["status"] == "stale"
+
+    flag = next(f for f in client.get(f"/v1/products/{pid}/risk-flags", headers=h).json()
+                if f["rule"] == "builder_hold")
+    assert flag["evidence"]["ai_summary"]
+
+    # Only the owner can decide.
+    other = client.post(f"/v1/risk-flags/{flag['id']}/decision", json={"decision": "clear"},
+                        headers=auth("intruder"))
+    assert other.status_code in (403, 404)
+
+    r = client.post(f"/v1/risk-flags/{flag['id']}/decision", headers=h, json={"decision": "clear"})
+    assert r.status_code == 200 and r.json()["status"] == "cleared" and r.json()["decided_at"]
+    again = client.post(f"/v1/products/{pid}/payout-previews", headers=h).json()
+    assert again["total_cents"] == 2000
+    assert client.post(f"/v1/risk-flags/{flag['id']}/decision", headers=h,
+                       json={"decision": "clear"}).status_code == 409
+
+    # Hold again and confirm: the commission is blocked and stays out of payouts.
+    r = client.post(f"/v1/payout-previews/{again['id']}/hold", headers=h, json={"backing_id": backing_id})
+    flag2 = next(f for f in client.get(f"/v1/products/{pid}/risk-flags", headers=h).json()
+                 if f["rule"] == "builder_hold" and f["status"] == "open")
+    r = client.post(f"/v1/risk-flags/{flag2['id']}/decision", headers=h, json={"decision": "confirm"})
+    assert r.status_code == 200 and r.json()["status"] == "confirmed"
+    db.expire_all()
+    assert db.scalars(select(Commission.state)).all() == ["blocked"]
+    last = client.post(f"/v1/products/{pid}/payout-previews", headers=h).json()
+    assert last["total_cents"] == 0
+
+
+def test_offer_suggestion_template_is_valid(client, campaign) -> None:
+    pid = campaign["product"]["id"]
+    h = campaign["headers"]
+    r = client.post(f"/v1/products/{pid}/offer-suggestion", headers=h,
+                    json={"notes": "Pro plan is $79 a year, for indie hackers."})
+    assert r.status_code == 200, r.text
+    s = r.json()
+    assert s["source"] == "template"
+    # The campaign already exists, so its list price wins over the notes.
+    assert s["referral_list_price_cents"] == OFFER["referral_list_price_cents"]
+    assert s["founding_price_cents"] < s["referral_list_price_cents"]
+    p = s["projection"]
+    assert p["friend_pays_cents"] == 8000 and p["backer_earns_cents"] == 2000
+    assert p["referral_keep_cents"] == 8000 - 2000 - 640
+    assert p["all_spots_keep_cents"] == p["founding_keep_cents"] * s["founding_spots_cap"]
+    assert all(s["reasons"].values())
+
+
+def test_offer_suggestion_reads_price_from_notes(client, auth) -> None:
+    h = auth("solo", "solo@example.com", "Sol Builder")
+    product = client.post("/v1/products", headers=h, json={
+        "name": "Notely", "url": "https://notely.example.com", "description": "Notes for devs",
+        "access_terms": "Lifetime Pro", "refund_terms": "", "webhook_url": None,
+    }).json()
+    s = client.post(f"/v1/products/{product['id']}/offer-suggestion", headers=h,
+                    json={"notes": "Pro is $79 per year"}).json()
+    assert s["referral_list_price_cents"] == 7900
+    assert s["founding_price_cents"] == 4900
+    assert client.post(f"/v1/products/{product['id']}/offer-suggestion", headers=auth("intruder"),
+                       json={}).status_code in (403, 404)

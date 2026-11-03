@@ -338,6 +338,8 @@ class PayoutPreview(Base):
     explanation_text: Mapped[str] = mapped_column(Text)
     explanation_source: Mapped[str] = mapped_column(String(16))
     ai_run_id: Mapped[str | None] = mapped_column(String(40))
+    risk_review: Mapped[list[Any]] = mapped_column(JSONB, default=list)
+    risk_source: Mapped[str | None] = mapped_column(String(16))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 

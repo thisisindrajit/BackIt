@@ -225,6 +225,41 @@ class CampaignDraftIn(StrictModel):
     source_text: Annotated[str, Field(max_length=8000)] | None = None
 
 
+class OfferSuggestionIn(StrictModel):
+    notes: Annotated[str, Field(max_length=4000)] | None = None
+    list_price_cents: PriceCents | None = None
+
+
+class OfferReasons(BaseModel):
+    founding_price: str
+    spots: str
+    list_price: str
+    discount: str
+    commission: str
+
+
+class OfferProjection(BaseModel):
+    founding_keep_cents: int
+    all_spots_keep_cents: int
+    friend_pays_cents: int
+    backer_earns_cents: int
+    referral_keep_cents: int
+    one_friend_each_keep_cents: int
+    one_friend_each_backers_cents: int
+
+
+class OfferSuggestion(BaseModel):
+    founding_price_cents: int
+    founding_spots_cap: int
+    referral_list_price_cents: int
+    referral_discount_bps: int
+    commission_bps: int
+    platform_fee_bps: int
+    reasons: OfferReasons
+    projection: OfferProjection
+    source: Literal["ai", "template"]
+
+
 class CampaignDraft(BaseModel):
     headline: str
     summary: str
@@ -553,9 +588,17 @@ class RiskFlagOut(BaseModel):
     evidence: dict[str, Any]
     explanation: str | None
     created_at: str
+    decided_at: str | None = None
 
 
 # ---------- Payouts ----------
+
+
+class RiskAssessmentOut(BaseModel):
+    level: Literal["low", "medium", "high"]
+    recommendation: Literal["pay", "hold"]
+    summary: str
+    signals: list[str]
 
 
 class PreviewItem(BaseModel):
@@ -564,6 +607,7 @@ class PreviewItem(BaseModel):
     payout_email_masked: str
     amount_cents: int
     commission_ids: list[str]
+    risk: RiskAssessmentOut | None = None
 
 
 ExclusionReason = Literal[
@@ -601,8 +645,17 @@ class PayoutPreviewOut(BaseModel):
     exclusions: list[PreviewExclusion]
     funding: Funding
     explanation: Explanation
+    risk_source: Literal["ai", "template"] | None
     created_at: str
     expires_at: str
+
+
+class HoldBackerIn(StrictModel):
+    backing_id: Annotated[str, Field(min_length=1, max_length=40)]
+
+
+class FlagDecisionIn(StrictModel):
+    decision: Literal["clear", "confirm"]
 
 
 class ApproveIn(StrictModel):
