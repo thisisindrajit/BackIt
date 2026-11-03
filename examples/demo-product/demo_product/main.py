@@ -2,6 +2,7 @@
 
 import hashlib
 import hmac
+import html
 import json
 import os
 import sqlite3
@@ -16,6 +17,7 @@ from typing import Annotated, Any
 
 from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
 TOLERANCE_SECONDS = 300
@@ -38,6 +40,25 @@ def _product_id() -> str:
     if not product_id:
         raise HTTPException(status_code=503, detail="BACKIT_PRODUCT_ID is not configured")
     return product_id
+
+
+def _app_name() -> str:
+    return os.environ.get("APP_NAME", "Ledgerly")
+
+
+def _campaign_url() -> str:
+    return os.environ.get("CAMPAIGN_URL", "https://www.backit.club/explore")
+
+
+def mask_email(value: str | None) -> str | None:
+    """These lists are public on the hosted test app, so emails are only hinted at."""
+    if not value or "@" not in value:
+        return value
+    name, domain = value.split("@", 1)
+    return f"{name[:1]}***@{domain}"
+
+
+INDEX_HTML = (Path(__file__).parent / "static" / "index.html").read_text()
 
 
 def _db_path() -> Path:
@@ -148,6 +169,7 @@ class ClaimOut(BaseModel):
     order_id: str
     plan_id: str
     user_ref: str
+    badge_number: int | None = None
 
 
 def redeem_with_backit(code: str, user_ref: str) -> dict[str, Any]:
@@ -245,14 +267,18 @@ def claim(body: ClaimIn) -> ClaimOut:
             (result["order_id"], result.get("buyer_email"), result["plan_id"], now_iso(), result["user_ref"]),
         )
     return ClaimOut(status=result["status"], order_id=result["order_id"], plan_id=result["plan_id"],
-                    user_ref=result["user_ref"])
+                    user_ref=result["user_ref"], badge_number=result.get("badge_number"))
 
 
 @app.get("/entitlements")
 def list_entitlements() -> list[Entitlement]:
     with connect() as conn:
         rows = conn.execute("SELECT * FROM entitlements ORDER BY granted_at DESC").fetchall()
-    return [Entitlement(**dict(r)) for r in rows]
+    return [
+        Entitlement(**{**dict(r), "buyer_email": mask_email(r["buyer_email"]),
+                       "claimed_by": mask_email(r["claimed_by"])})
+        for r in rows
+    ]
 
 
 @app.get("/events")
@@ -264,6 +290,13 @@ def list_events(limit: int = 50) -> list[ProcessedEvent]:
     return [ProcessedEvent(**dict(r)) for r in rows]
 
 
-@app.get("/")
-def root() -> dict[str, str]:
+@app.get("/", response_class=HTMLResponse)
+def home() -> str:
+    return INDEX_HTML.replace("__APP_NAME__", html.escape(_app_name())).replace(
+        "__CAMPAIGN_URL__", html.escape(_campaign_url(), quote=True)
+    )
+
+
+@app.get("/health")
+def health() -> dict[str, str]:
     return {"service": "backit-demo-product", "webhook": "/webhooks/backit"}

@@ -95,3 +95,11 @@ def test_claim_unlocks_for_user_and_survives_webhook(client: TestClient, monkeyp
 def test_claim_needs_product_id(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("BACKIT_PRODUCT_ID", raising=False)
     assert client.post("/claims", json={"code": "X", "user_ref": "u"}).status_code == 503
+
+
+def test_home_page_and_masked_emails(client: TestClient) -> None:
+    page = client.get("/")
+    assert page.status_code == 200 and "Unlock Ledgerly Pro" in page.text and "__APP_NAME__" not in page.text
+    send(client, purchase("evt_mask", "ord_m"))
+    [ent] = client.get("/entitlements").json()
+    assert ent["buyer_email"] == "o***@example.com"

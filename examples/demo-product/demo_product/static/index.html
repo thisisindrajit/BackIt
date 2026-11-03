@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__APP_NAME__ · BackIt test app</title>
+<meta name="robots" content="noindex">
+<style>
+  :root { --ink:#16181d; --muted:#6b7079; --line:#e7e8ec; --bg:#f7f7f9; --card:#fff; --brand:#3d5afe; --ok:#1f8a4c; --warn:#b45309; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:15px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; color:var(--ink); background:var(--bg); }
+  .banner { background:var(--ink); color:#fff; font-size:13px; text-align:center; padding:8px 16px; }
+  .banner a { color:#fff; }
+  header { display:flex; align-items:center; justify-content:space-between; gap:12px; max-width:880px; margin:0 auto; padding:20px 20px 8px; }
+  .logo { font-weight:700; font-size:20px; letter-spacing:-0.02em; display:flex; align-items:center; gap:8px; }
+  .logo i { width:22px; height:22px; border-radius:7px; background:var(--brand); display:inline-block; }
+  .plan { font-size:13px; border:1px solid var(--line); background:var(--card); border-radius:999px; padding:4px 12px; color:var(--muted); }
+  .plan.pro { border-color:var(--ok); color:var(--ok); font-weight:600; }
+  main { max-width:880px; margin:0 auto; padding:12px 20px 48px; display:grid; gap:16px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:20px; }
+  h2 { font-size:15px; margin:0 0 12px; }
+  .stats { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+  .stat small { color:var(--muted); display:block; font-size:12px; }
+  .stat b { font-size:22px; letter-spacing:-0.02em; }
+  .pro-area { position:relative; overflow:hidden; }
+  .locked .pro-content { filter:blur(6px); pointer-events:none; user-select:none; }
+  .bars { display:flex; align-items:flex-end; gap:8px; height:120px; margin:8px 0 16px; }
+  .bars span { flex:1; background:var(--brand); opacity:.75; border-radius:6px 6px 0 0; }
+  table { width:100%; border-collapse:collapse; font-size:14px; }
+  td, th { text-align:left; padding:8px 4px; border-top:1px solid var(--line); }
+  th { color:var(--muted); font-weight:500; font-size:12px; border-top:0; }
+  .paywall { position:absolute; inset:0; display:none; align-items:center; justify-content:center; padding:16px; background:rgba(247,247,249,.55); }
+  .locked .paywall { display:flex; }
+  .pay { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:22px; width:100%; max-width:380px; box-shadow:0 12px 40px rgba(22,24,29,.12); }
+  .pay h3 { margin:0 0 4px; font-size:18px; }
+  .pay p { margin:0 0 14px; color:var(--muted); font-size:14px; }
+  label { display:block; font-size:13px; font-weight:500; margin:10px 0 4px; }
+  input { width:100%; font:inherit; padding:9px 12px; border:1px solid var(--line); border-radius:10px; }
+  input:focus { outline:2px solid var(--brand); outline-offset:-1px; }
+  button { font:inherit; font-weight:600; border:0; border-radius:10px; padding:10px 14px; cursor:pointer; }
+  .primary { width:100%; margin-top:14px; background:var(--brand); color:#fff; }
+  .primary:disabled { opacity:.6; cursor:wait; }
+  .link { background:none; color:var(--muted); padding:0; font-weight:500; text-decoration:underline; }
+  .msg { font-size:13px; margin-top:10px; min-height:1em; }
+  .msg.err { color:#c62828; }
+  .alt { font-size:13px; text-align:center; margin-top:12px; color:var(--muted); }
+  .alt a { color:var(--brand); font-weight:600; }
+  .unlocked-note { display:none; font-size:13px; color:var(--ok); margin-bottom:8px; }
+  .unlocked .unlocked-note { display:block; }
+  details summary { cursor:pointer; font-weight:600; }
+  .muted { color:var(--muted); font-size:13px; }
+  .pill { font-size:12px; border-radius:999px; padding:2px 8px; background:#eef0f4; }
+  .pill.granted, .pill.pong { background:#e3f4ea; color:var(--ok); }
+  .pill.revoked { background:#fdecea; color:#c62828; }
+  code { font-size:12px; }
+  @media (max-width:560px) { .stats { grid-template-columns:1fr; } .stat b { font-size:20px; } }
+</style>
+</head>
+<body>
+<div class="banner">This is a pretend app for testing <a href="https://www.backit.club">BackIt</a>. __APP_NAME__ isn't a real product and no real money moves.</div>
+<header>
+  <div class="logo"><i></i>__APP_NAME__</div>
+  <span id="plan" class="plan">Free plan</span>
+</header>
+<main>
+  <section class="card">
+    <h2>This month</h2>
+    <div class="stats">
+      <div class="stat"><small>Income</small><b>$8,420</b></div>
+      <div class="stat"><small>Expenses</small><b>$3,115</b></div>
+      <div class="stat"><small>Profit</small><b>$5,305</b></div>
+    </div>
+  </section>
+
+  <section id="pro" class="card pro-area locked">
+    <div class="pro-content">
+      <p class="unlocked-note" id="unlocked-note"></p>
+      <h2>Pro · Cash-flow forecast</h2>
+      <div class="bars"><span style="height:40%"></span><span style="height:55%"></span><span style="height:48%"></span><span style="height:70%"></span><span style="height:64%"></span><span style="height:82%"></span><span style="height:90%"></span></div>
+      <table>
+        <tr><th>Category</th><th>Next 30 days</th><th>Trend</th></tr>
+        <tr><td>Subscriptions</td><td>$6,900</td><td>+12%</td></tr>
+        <tr><td>Contractors</td><td>$1,850</td><td>−4%</td></tr>
+        <tr><td>Tax set-aside</td><td>$1,420</td><td>+8%</td></tr>
+      </table>
+      <p style="margin-top:14px"><button class="link" id="forget" type="button">Lock Pro again on this device</button></p>
+    </div>
+    <div class="paywall">
+      <form class="pay" id="claim">
+        <h3>Unlock __APP_NAME__ Pro</h3>
+        <p>Backed __APP_NAME__ on BackIt? Enter the access code from your backing to unlock Pro.</p>
+        <label for="user_ref">Your __APP_NAME__ account email</label>
+        <input id="user_ref" name="user_ref" type="email" required autocomplete="email" placeholder="you@example.com">
+        <label for="code">BackIt access code</label>
+        <input id="code" name="code" required autocomplete="off" placeholder="XXXX-XXXX-XXXX" spellcheck="false">
+        <button class="primary" id="submit" type="submit">Unlock Pro</button>
+        <div class="msg" id="msg" role="status"></div>
+        <div class="alt">Not a backer yet? <a href="__CAMPAIGN_URL__" target="_blank" rel="noopener">Back __APP_NAME__ on BackIt →</a></div>
+      </form>
+    </div>
+  </section>
+
+  <section class="card">
+    <details id="log">
+      <summary>Behind the scenes: webhooks from BackIt</summary>
+      <p class="muted">BackIt sends a signed webhook when someone backs __APP_NAME__ (<code>purchase.completed</code>) or gets refunded (<code>refund.issued</code>). This app checks the signature, then grants or revokes access.</p>
+      <table><thead><tr><th>Event</th><th>Order</th><th>Result</th><th>Received</th></tr></thead><tbody id="events"><tr><td colspan="4" class="muted">Loading…</td></tr></tbody></table>
+    </details>
+  </section>
+</main>
+<script>
+(() => {
+  const KEY = "backit-test-app:pro";
+  const $ = (id) => document.getElementById(id);
+  const pro = $("pro"), plan = $("plan"), msg = $("msg"), submit = $("submit");
+
+  function setUnlocked(result) {
+    pro.classList.toggle("locked", !result);
+    pro.classList.toggle("unlocked", !!result);
+    plan.classList.toggle("pro", !!result);
+    plan.textContent = result ? (result.badge_number ? `Pro · Founding backer #${result.badge_number}` : "Pro") : "Free plan";
+    $("unlocked-note").textContent = result ? `Unlocked for ${result.user_ref} with a BackIt code (order ${result.order_id}).` : "";
+  }
+
+  async function redeem(code, user_ref) {
+    const res = await fetch("/claims", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code, user_ref }) });
+    const body = await res.json().catch(() => null);
+    if (!res.ok) { const e = new Error(body?.detail ?? "That code didn’t work."); e.status = res.status; throw e; }
+    return body;
+  }
+
+  $("claim").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const code = $("code").value.trim(), user_ref = $("user_ref").value.trim().toLowerCase();
+    submit.disabled = true; msg.className = "msg"; msg.textContent = "Checking with BackIt…";
+    try {
+      const result = await redeem(code, user_ref);
+      localStorage.setItem(KEY, JSON.stringify({ code, user_ref }));
+      msg.textContent = "";
+      setUnlocked(result);
+      loadEvents();
+    } catch (err) {
+      msg.className = "msg err"; msg.textContent = err.message;
+    } finally { submit.disabled = false; }
+  });
+
+  $("forget").addEventListener("click", () => { localStorage.removeItem(KEY); setUnlocked(null); });
+
+  // Re-check a saved unlock with BackIt each visit, so a refund locks Pro again.
+  async function restore() {
+    const saved = JSON.parse(localStorage.getItem(KEY) || "null");
+    if (!saved) return;
+    $("user_ref").value = saved.user_ref; $("code").value = saved.code;
+    try { setUnlocked(await redeem(saved.code, saved.user_ref)); }
+    catch (err) {
+      if (err.status && err.status < 500) {
+        localStorage.removeItem(KEY);
+        msg.className = "msg err"; msg.textContent = err.status === 410 ? "Your backing was refunded, so Pro is locked again." : err.message;
+      }
+    }
+  }
+
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+  async function loadEvents() {
+    try {
+      const events = await (await fetch("/events?limit=15")).json();
+      $("events").innerHTML = events.length ? events.map((e) => `<tr><td><code>${esc(e.event_type)}</code></td><td><code>${esc(e.order_id ?? "—")}</code></td><td><span class="pill ${esc(e.outcome)}">${esc(e.outcome)}</span></td><td>${esc(new Date(e.received_at).toLocaleString())}</td></tr>`).join("")
+        : `<tr><td colspan="4" class="muted">No webhooks yet. Back __APP_NAME__ on BackIt, or send a test webhook from the BackIt dashboard.</td></tr>`;
+    } catch { $("events").innerHTML = `<tr><td colspan="4" class="muted">Couldn’t load events.</td></tr>`; }
+  }
+
+  restore();
+  loadEvents();
+  $("log").addEventListener("toggle", loadEvents);
+})();
+</script>
+</body>
+</html>
