@@ -275,8 +275,9 @@ function ReferralExample({ listCents, discountBps, commissionBps, feeBps }: { li
       </ul>
       <p className="text-pretty">
         A friend uses a backer’s link and pays <span className="tabular font-medium">{money(paid)}</span> instead of{" "}
-        <span className="tabular">{money(listCents)}</span>. The backer earns <span className="tabular font-medium">{money(reward)}</span>, BackIt takes{" "}
-        <span className="tabular">{money(fee)}</span>, and you keep <span className="tabular font-medium">{money(kept)}</span> before PayPal fees.
+        <span className="tabular">{money(listCents)}</span>. The backer earns <span className="tabular font-medium">{money(reward)}</span>{" "}
+        <span className="tabular">({pct(commissionBps)} of {money(paid)})</span>, BackIt takes <span className="tabular">{money(fee)}</span>{" "}
+        <span className="tabular">({pct(feeBps)} of {money(paid)})</span>, and you keep <span className="tabular font-medium">{money(kept)}</span> before PayPal fees.
       </p>
     </div>
   );
