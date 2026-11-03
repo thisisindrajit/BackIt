@@ -101,7 +101,8 @@ function DraftStart({ product, onDraft }: { product: Product; onDraft: (d: Campa
       <CardHeader>
         <CardTitle>Draft your campaign</CardTitle>
         <CardDescription>
-          The AI suggests a pitch and an offer from what you share here. Nothing is saved or published until you review it.
+          The AI writes your story from what you share here. Next, you’ll review it and set the offer: founding price, number of spots, buyer
+          discount, and backer commission. Nothing is saved or published until you do.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -255,6 +256,8 @@ const STORY_MAX = 4000;
 
 const applyBps = (cents: number, bps: number) => Math.round((cents * bps) / 10000);
 
+const pct = (bps: number) => `${+(bps / 100).toFixed(2)}%`;
+
 function ReferralExample({ listCents, discountBps, commissionBps, feeBps }: { listCents: number; discountBps: number; commissionBps: number; feeBps: number }) {
   if (![listCents, discountBps, commissionBps].every(Number.isFinite) || listCents <= 0) return null;
   const paid = listCents - applyBps(listCents, discountBps);
@@ -264,6 +267,12 @@ function ReferralExample({ listCents, discountBps, commissionBps, feeBps }: { li
   return (
     <div className="flex flex-col gap-1.5 rounded-2xl bg-accent/70 px-4 py-3 text-sm text-accent-foreground">
       <p className="font-medium">Example</p>
+      <ul className="tabular flex flex-wrap gap-1.5 text-xs">
+        <li className="rounded-full bg-background/70 px-2.5 py-1">List price {money(listCents)}</li>
+        <li className="rounded-full bg-background/70 px-2.5 py-1">Buyer discount {pct(discountBps)}</li>
+        <li className="rounded-full bg-background/70 px-2.5 py-1">Backer commission {pct(commissionBps)}</li>
+        <li className="rounded-full bg-background/70 px-2.5 py-1">BackIt fee {pct(feeBps)}</li>
+      </ul>
       <p className="text-pretty">
         A friend uses a backer’s link and pays <span className="tabular font-medium">{money(paid)}</span> instead of{" "}
         <span className="tabular">{money(listCents)}</span>. The backer earns <span className="tabular font-medium">{money(reward)}</span>, BackIt takes{" "}

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ArrowRightIcon } from "lucide-react";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import { ErrorState } from "@/components/backit/error-state";
-import { FoundingSeal } from "@/components/backit/founding-seal";
+import { FoundingSeal, ReferralSeal } from "@/components/backit/founding-seal";
 import { RoleBadge } from "@/components/backit/role-info";
 import { PageHeader } from "@/components/backit/page-header";
 import { NoCampaigns, ProductTile } from "@/components/backit/product-tile";
@@ -126,7 +126,11 @@ export default function OverviewPage() {
                 key={b.id}
                 className="lift relative flex items-start gap-4 rounded-3xl bg-card p-4 shadow-soft ring-1 ring-foreground/[0.07] has-[a:focus-visible]:ring-3 has-[a:focus-visible]:ring-ring/50 sm:p-5"
               >
-                <FoundingSeal number={b.badge_number ?? undefined} size={64} className="shrink-0" />
+                {b.badge_number ? (
+                  <FoundingSeal number={b.badge_number} size={64} className="shrink-0" />
+                ) : (
+                  <ReferralSeal size={64} className="shrink-0" />
+                )}
                 <span className="flex min-w-0 flex-1 flex-col gap-1">
                   <Link
                     href={`/app/backings#backing-${b.id}`}

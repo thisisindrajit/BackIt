@@ -100,7 +100,7 @@ Project `backit-512304`, region `us-central1`. `.gcloudignore` keeps `.env` out 
 
 - **API:** Cloud Run service `backit-api`, mapped to `https://api.backit.club` (CNAME `api` → `ghs.googlehosted.com.`).
 - **Worker:** Cloud Run job `backit-worker` (`python -m app.workers.run --once`), triggered every minute by Cloud Scheduler job `backit-worker-every-minute`.
-- **Secrets (Secret Manager):** `db-username`, `db-password`, `app-encryption-key`, `paypal-client-id`, `paypal-client-secret`, `paypal-webhook-id`.
+- **Secrets (Secret Manager):** `db-username`, `db-password`, `app-encryption-key`, `paypal-client-id`, `paypal-client-secret`, `paypal-webhook-id`, `openrouter-api-key` (campaign drafts fall back to a template without it).
 - **PayPal webhook:** `https://api.backit.club/v1/webhooks/paypal` on the sandbox app.
 
 Redeploy after code changes:

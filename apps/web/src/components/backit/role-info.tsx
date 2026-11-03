@@ -45,7 +45,10 @@ export function RoleBadge({ role, label, className }: { role: Role; label?: stri
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-full bg-secondary py-1 pr-1 pl-2.5 text-xs text-secondary-foreground",
+        "inline-flex items-center gap-1 rounded-full py-1 pr-1 pl-2.5 text-xs",
+        role === "referral"
+          ? "bg-accent text-primary-deep ring-1 ring-primary-deep/25"
+          : "bg-secondary text-secondary-foreground",
         className,
       )}
     >

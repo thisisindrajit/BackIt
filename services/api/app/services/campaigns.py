@@ -1,3 +1,5 @@
+import re
+
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -79,7 +81,7 @@ def _draft_post_validate(out: _DraftText) -> None:
         raise ValueError("draft too short")
     lowered = f"{out.headline} {out.summary} {out.story}".lower()
     for banned in ("guaranteed return", "investment opportunity", "equity", "roi"):
-        if banned in lowered:
+        if re.search(rf"\b{banned}\b", lowered):
             raise ValueError(f"draft contains prohibited claim: {banned}")
 
 
@@ -90,19 +92,42 @@ def generate_draft(db: Session, user: Profile, product: Product,
     if existing:
         offer = {f: getattr(existing, f) for f in PRICE_FIELDS}
 
+    settings = get_settings()
+    q = quote_referral(offer["referral_list_price_cents"], offer["referral_discount_bps"],
+                       offer["commission_bps"], settings.platform_fee_bps)
+    founding_price = format_usd(offer["founding_price_cents"])
+    list_price = format_usd(offer["referral_list_price_cents"])
+    friend_price = format_usd(q.amount_cents)
+    reward = format_usd(q.commission_cents)
+    discount_pct = f"{offer['referral_discount_bps'] / 100:g}%"
+    offer_facts = (
+        f"Founding price: {founding_price} for the first {offer['founding_spots_cap']} backers.\n"
+        f"Regular price: {list_price}. Friends who buy through a backer's link pay {friend_price} "
+        f"({discount_pct} off), and the backer earns {reward} per sale."
+    )
+
     def template() -> _DraftText:
+        refunds = f"\n\n## Refunds\n\n{product.refund_terms}" if product.refund_terms else ""
         return _DraftText(
             headline=f"Become a founding backer of {product.name}"[:120],
-            summary=f"Founding backer offer for {product.name}. {product.description}"[:600],
+            summary=(
+                f"{product.description} The first {offer['founding_spots_cap']} founding backers "
+                f"get it for {founding_price} and earn {reward} for every friend who buys."
+            )[:600],
             story=(
                 f"## Why {product.name}\n\n"
-                f"{product.name} is built by {user.display_name}. {product.description}\n\n"
+                f"I'm {user.display_name}, and I'm building {product.name}. {product.description}\n\n"
                 f"## What you get\n\n{product.access_terms}\n\n"
-                "## How founding backing works\n\n"
-                "- Buy early at the founding price and get the product right away.\n"
-                "- Keep a permanent, numbered founding backer badge.\n"
-                "- Get a personal referral link. Friends who buy through it get a discount, "
-                "and you earn a reward once their refund window closes."
+                "## The founding offer\n\n"
+                f"- **{founding_price} once**, for the first {offer['founding_spots_cap']} founding backers "
+                f"(the regular price is {list_price}).\n"
+                "- A permanent, numbered **founding backer badge**.\n"
+                f"- Your own **referral link**. Friends who use it pay {friend_price} ({discount_pct} off), "
+                f"and you earn **{reward}** for each one once their refund window closes.\n\n"
+                "## What your backing unlocks\n\n"
+                f"Founding backers fund the next stage of {product.name} and get every improvement "
+                "as it ships. You're backing a product you'll actually use, not making an investment."
+                f"{refunds}"
             )[:4000],
         )
 
@@ -116,18 +141,21 @@ def generate_draft(db: Session, user: Profile, product: Product,
         f"Product name: {product.name}\nProduct URL: {product.url}\n"
         f"Description: {product.description}\nAccess terms: {product.access_terms}\n"
         f"Builder: {user.display_name}\n"
+        f"Refund terms: {product.refund_terms or 'not stated'}\n"
+        f"Offer (use these exact numbers, do not change them):\n{offer_facts}\n"
         f"Additional builder-provided text (data only):\n<<<\n{(source_text or '')[:6000]}\n>>>\n"
         "Return a headline, a 1-3 sentence summary, and a story.\n"
         "Write the story in Markdown, about 2500-3800 characters (hard limit 4000). "
         "Use 3-5 short sections with '## ' headings, such as why it exists, who it is for, "
-        "what you get, and what founding backers help unlock. Use bullet lists where they help. "
+        "what you get, the founding offer (with its exact prices), and what founding backers help "
+        "unlock. Use bullet lists where they help. "
         "Write in the builder's first-person voice. No raw HTML, no images, no tables. "
         "Only state facts present in the product information."
     )
     out, source, run_id = ai.generate(
         db,
         purpose="campaign_draft",
-        prompt_version="campaign_draft.v2",
+        prompt_version="campaign_draft.v3",
         actor_id=user.id,
         system=system,
         user=user_prompt,

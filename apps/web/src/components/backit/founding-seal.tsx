@@ -57,3 +57,37 @@ export function FoundingSeal({
     </svg>
   );
 }
+
+const REFERRAL_RING = "REFERRAL BUYER  •  BACKIT.CLUB  •  REFERRAL BUYER  •  BACKIT.CLUB  •  ";
+
+/** Seal for buyers who came in through a backer's link: inverted palette and a link mark instead of a number. */
+export function ReferralSeal({ size = 120, className }: { size?: number; className?: string }) {
+  const id = useId();
+  return (
+    <svg
+      role="img"
+      aria-label="Referral buyer badge"
+      viewBox="0 0 200 200"
+      width={size}
+      height={size}
+      className={cn("shrink-0 drop-shadow-[0_10px_18px_rgb(27_35_28/0.16)]", className)}
+    >
+      <defs>
+        <path id={`${id}-ring`} d="M100,100 m-78,0 a78,78 0 1,1 156,0 a78,78 0 1,1 -156,0" />
+      </defs>
+      <circle cx="100" cy="100" r="98" fill="var(--accent)" stroke="var(--primary-deep)" strokeOpacity="0.25" strokeWidth="2" />
+      <circle cx="100" cy="100" r="92" fill="none" stroke="var(--primary-deep)" strokeOpacity="0.35" strokeWidth="1" strokeDasharray="1 3" />
+      <circle cx="100" cy="100" r="62" fill="var(--primary-deep)" />
+      <text fill="var(--primary-deep)" fontSize="12.5" fontWeight="600" letterSpacing="2.2" fontFamily="var(--font-sans)">
+        <textPath href={`#${id}-ring`} textLength="486" lengthAdjust="spacing">
+          {REFERRAL_RING}
+        </textPath>
+      </text>
+      <g transform="translate(70 70) scale(2.5)" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M9 17H7A5 5 0 0 1 7 7h2" />
+        <path d="M15 7h2a5 5 0 1 1 0 10h-2" />
+        <line x1="8" x2="16" y1="12" y2="12" />
+      </g>
+    </svg>
+  );
+}

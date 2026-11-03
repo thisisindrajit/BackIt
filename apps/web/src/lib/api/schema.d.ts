@@ -952,6 +952,10 @@ export interface components {
             id: string;
             /** Order Ref */
             order_ref: string;
+            /** Buyer Name */
+            buyer_name: string;
+            /** Paid Cents */
+            paid_cents: number;
             /** Amount Cents */
             amount_cents: number;
             /**

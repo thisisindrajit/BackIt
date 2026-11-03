@@ -13,8 +13,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Stat } from "@/components/backit/stat";
-import { FoundingSeal } from "@/components/backit/founding-seal";
-import { RoleBadge, RoleInfo } from "@/components/backit/role-info";
+import { FoundingSeal, ReferralSeal } from "@/components/backit/founding-seal";
+import { RoleInfo } from "@/components/backit/role-info";
 import { StatusBadge } from "@/components/backit/status-badge";
 import { CopyField } from "@/components/builder/secret-reveal";
 import { AccessCode } from "@/components/backer/access-code";
@@ -63,7 +63,10 @@ export function BackingCard({ backing: b }: { backing: Backing }) {
               <RoleInfo role="founding" className="text-muted-foreground" />
             </span>
           ) : (
-            <RoleBadge role="referral" />
+            <span className="flex items-start gap-0.5">
+              <ReferralSeal size={72} className="pop-in" />
+              <RoleInfo role="referral" className="text-muted-foreground" />
+            </span>
           )}
         </CardAction>
       </CardHeader>
@@ -95,18 +98,24 @@ export function BackingCard({ backing: b }: { backing: Backing }) {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead>Buyer</TableHead>
+                      <TableHead>Bought</TableHead>
+                      <TableHead className="max-sm:hidden">Paid</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead>Releases</TableHead>
+                      <TableHead className="max-sm:hidden">Releases</TableHead>
                       <TableHead className="text-right">Reward</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {b.commissions.map((c) => (
                       <TableRow key={c.id}>
+                        <TableCell className="text-foreground">{c.buyer_name}</TableCell>
+                        <TableCell>{shortDate(c.created_at)}</TableCell>
+                        <TableCell className="tabular max-sm:hidden">{money(c.paid_cents)}</TableCell>
                         <TableCell>
                           <StatusBadge status={c.state} />
                         </TableCell>
-                        <TableCell>{c.state === "held" ? shortDate(c.release_at) : "Released"}</TableCell>
+                        <TableCell className="max-sm:hidden">{c.state === "held" ? shortDate(c.release_at) : "Released"}</TableCell>
                         <TableCell className="tabular text-right text-foreground">{money(c.amount_cents)}</TableCell>
                       </TableRow>
                     ))}

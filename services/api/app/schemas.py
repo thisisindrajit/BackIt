@@ -446,6 +446,8 @@ CommissionState = Literal["held", "payable", "reserved", "submitted", "paid", "r
 class CommissionOut(BaseModel):
     id: str
     order_ref: str
+    buyer_name: str
+    paid_cents: int
     amount_cents: int
     state: CommissionState
     release_at: str

@@ -231,14 +231,24 @@ def balances_for(db: Session, backing_id: str) -> Balances:
     )
 
 
+def short_name(display_name: str) -> str:
+    """First name and last initial, so backers see who bought without full identities."""
+    parts = display_name.split()
+    if not parts:
+        return "Someone"
+    return f"{parts[0]} {parts[-1][0]}." if len(parts) > 1 else parts[0]
+
+
 def backing_out(db: Session, backing: Backing) -> BackingOut:
     campaign = db.get(Campaign, backing.campaign_id)
     assert campaign is not None
     product = db.get(Product, campaign.product_id)
     assert product is not None
     owner = db.get(Profile, product.owner_id)
-    commissions = db.scalars(
-        select(Commission)
+    commissions = db.execute(
+        select(Commission, Order.amount_cents, Profile.display_name)
+        .join(Order, Order.id == Commission.order_id)
+        .join(Profile, Profile.id == Order.buyer_id)
         .where(Commission.backing_id == backing.id)
         .order_by(Commission.created_at.desc())
     ).all()
@@ -262,12 +272,14 @@ def backing_out(db: Session, backing: Backing) -> BackingOut:
             CommissionOut(
                 id=c.id,
                 order_ref=public_ref("order", c.order_id),
+                buyer_name=short_name(buyer),
+                paid_cents=paid,
                 amount_cents=c.amount_cents,
                 state=c.state,  # type: ignore[arg-type]
                 release_at=iso(c.release_at) or "",
                 created_at=iso(c.created_at) or "",
             )
-            for c in commissions
+            for c, paid, buyer in commissions
         ],
         created_at=iso(backing.created_at) or "",
     )
