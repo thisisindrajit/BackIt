@@ -12,15 +12,20 @@ from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.models import Product, Profile
-from app.money import format_usd, offer_problems, quote_founding, quote_referral
+from app.money import dollar_amounts_cents, format_usd, offer_problems, quote_founding, quote_referral
 from app.presenters import latest_verification
 from app.providers import ai
 from app.schemas import OfferProjection, OfferReasons, OfferSuggestion, ProductFacts
 from app.services.campaigns import DEFAULT_OFFER, PRICE_FIELDS
 from app.services.common import campaign_for_product
 
-_PRICE_RE = re.compile(r"\$\s?(\d{1,5}(?:\.\d{2})?)")
-_AMOUNT_RE = re.compile(r"\$[\d,]+(?:\.\d{2})?")
+_PRICE_RE = re.compile(
+    r"\$\s?(\d{1,3}(?:,\d{3})+|\d+)(\.\d{1,2})?\s*(?:/|per\s+|a\s+|an\s+)?\s*(month|mo|year|yr|annum)?\b",
+    re.I,
+)
+# A lifetime deal is worth a couple of years of a subscription.
+_LIFETIME_RE = re.compile(r"\b(lifetime|forever|for life|one[- ]time)\b", re.I)
+_PERIOD_MULTIPLIER = {"month": 24, "mo": 24, "year": 2, "yr": 2, "annum": 2}
 
 
 class _Idea(BaseModel):
@@ -50,7 +55,9 @@ def _guess_list_price(product: Product | ProductFacts, notes: str | None, hint: 
     for text in (notes or "", product.description, product.access_terms):
         m = _PRICE_RE.search(text)
         if m:
-            cents = round(float(m.group(1)) * 100)
+            cents = round(float(m.group(1).replace(",", "") + (m.group(2) or "")) * 100)
+            if m.group(3) and _LIFETIME_RE.search(product.access_terms):
+                cents = _charm(cents * _PERIOD_MULTIPLIER[m.group(3).lower()])
             if 100 <= cents <= 1_000_000:
                 return cents
     return DEFAULT_OFFER["referral_list_price_cents"]
@@ -92,6 +99,7 @@ def suggest_offer(db: Session, user: Profile, product: Product | ProductFacts, n
         list_price_hint = current["referral_list_price_cents"]
     list_price = _guess_list_price(product, notes, list_price_hint)
     mrr = _avg_monthly_revenue(db, product.id) if saved else None
+    stated = set(dollar_amounts_cents(" ".join((notes or "", product.description, product.access_terms))))
 
     def valid(o: dict[str, int]) -> bool:
         return not offer_problems(o["founding_price_cents"], o["referral_list_price_cents"],
@@ -123,13 +131,14 @@ def suggest_offer(db: Session, user: Profile, product: Product | ProductFacts, n
         if o.founding_price_cents >= o.referral_list_price_cents:
             raise ValueError("founding price must be below the list price")
         p = projection(offer, fee_bps)
-        allowed = {format_usd(v) for v in (*offer.values(), *p.model_dump().values(), list_price)}
-        allowed |= {a.replace(".00", "") for a in allowed}
+        allowed = {*offer.values(), *p.model_dump().values(), list_price, *stated,
+                   o.referral_list_price_cents - p.friend_pays_cents}
         text = " ".join((o.founding_price_reason, o.spots_reason, o.list_price_reason,
                          o.discount_reason, o.commission_reason))
-        for amount in _AMOUNT_RE.findall(text):
-            if amount not in allowed:
-                raise ValueError(f"reason mentions unknown amount {amount}")
+        allowed |= {round(v / 100) * 100 for v in allowed}  # "$119" for $119.20 is fine
+        for cents in dollar_amounts_cents(text):
+            if cents not in allowed:
+                raise ValueError(f"reason mentions unknown amount {format_usd(cents)}")
 
     facts = {
         "product": product.name,
@@ -146,7 +155,7 @@ def suggest_offer(db: Session, user: Profile, product: Product | ProductFacts, n
     out, source, _ = ai.generate(
         db,
         purpose="offer_advice",
-        prompt_version="offer_advice.v1",
+        prompt_version="offer_advice.v2",
         actor_id=user.id,
         system=(
             "You are a pricing advisor for indie software builders running a founding-backer campaign on BackIt. "
@@ -155,9 +164,13 @@ def suggest_offer(db: Session, user: Profile, product: Product | ProductFacts, n
             "on what the friend pays. Suggest terms that reward early backers, give friends a real reason to buy, "
             "make sharing worthwhile, and still leave the builder most of each sale. "
             "Use the regular price hint as the list price unless the notes clearly state another price. "
+            "Every purchase is a one-time payment for what_buyers_get. If the product is a subscription and "
+            "buyers get lifetime access, the list price should be a one-time lifetime price (about two years "
+            "of the subscription), never a single month. "
             "The founding price must be below the list price. All prices are integer cents, percentages are "
             "basis points (2000 = 20%). Each reason is one short sentence in plain words for the builder; "
-            "only mention dollar amounts that are part of your suggestion."
+            "only mention dollar amounts that are part of your suggestion. Never refer to the input "
+            "fields (no 'hint', 'notes' or 'facts'); talk about the product and its price directly."
         ),
         user=json.dumps(facts, default=str),
         schema=_Idea,

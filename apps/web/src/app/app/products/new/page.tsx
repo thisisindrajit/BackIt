@@ -198,7 +198,8 @@ export default function NewCampaignPage() {
           {canAskAi ? (
             <OfferAdvisor
               request={() => {
-                const listCents = dollarsToCents(values.referral_list_price);
+                // The untouched default list price is a placeholder; let the server read the real price from the description.
+                const listCents = values.referral_list_price === initialCampaign.referral_list_price ? NaN : dollarsToCents(values.referral_list_price);
                 return authedApi<OfferSuggestion>("/products/offer-suggestion", {
                   method: "POST",
                   body: { product: facts(), list_price_cents: Number.isFinite(listCents) && listCents >= 100 ? listCents : null },

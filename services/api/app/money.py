@@ -1,5 +1,6 @@
 """Pure money arithmetic. All amounts are integer cents; rates are basis points."""
 
+import re
 from dataclasses import dataclass
 from typing import Literal
 
@@ -103,6 +104,20 @@ def offer_problems(
     if founding.platform_fee_cents >= founding.amount_cents:
         problems.append("platform fee must be below the founding price")
     return problems
+
+
+_DOLLAR_RE = re.compile(r"\$\s?(\d{1,3}(?:,\d{3})+|\d+)(\.\d{1,2})?")
+
+
+def dollar_amounts_cents(text: str) -> list[int]:
+    """Every "$1,234.50"-style amount in free text, in cents. Trailing punctuation is ignored."""
+    out = []
+    for whole, frac in _DOLLAR_RE.findall(text):
+        cents = int(whole.replace(",", "")) * 100
+        if frac:
+            cents += int(frac[1:].ljust(2, "0"))
+        out.append(cents)
+    return out
 
 
 def format_usd(cents: int) -> str:

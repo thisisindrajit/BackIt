@@ -102,9 +102,13 @@ def test_offer_suggestion_reads_price_from_notes(client, auth) -> None:
         "access_terms": "Lifetime Pro", "refund_terms": "", "webhook_url": None,
     }).json()
     s = client.post(f"/v1/products/{product['id']}/offer-suggestion", headers=h,
-                    json={"notes": "Pro is $79 per year"}).json()
+                    json={"notes": "Pro is $79"}).json()
     assert s["referral_list_price_cents"] == 7900
     assert s["founding_price_cents"] == 4900
+    # Lifetime access to a subscription is priced as about two years of it, not one month.
+    s = client.post(f"/v1/products/{product['id']}/offer-suggestion", headers=h,
+                    json={"notes": "Pro is $12/month"}).json()
+    assert s["referral_list_price_cents"] == 28900
     assert client.post(f"/v1/products/{product['id']}/offer-suggestion", headers=auth("intruder"),
                        json={}).status_code in (403, 404)
 
@@ -120,11 +124,11 @@ def test_one_step_new_campaign(client, auth, db) -> None:
     facts = {k: PRODUCT[k] for k in ("name", "url", "description", "access_terms", "refund_terms")}
     idea = client.post("/v1/products/offer-suggestion", headers=h,
                        json={"product": facts, "notes": "Pro is $59 a year"}).json()
-    assert idea["referral_list_price_cents"] == 5900 and idea["source"] == "template"
+    assert idea["referral_list_price_cents"] == 11900 and idea["source"] == "template"
     offer = {k: idea[k] for k in ("founding_price_cents", "founding_spots_cap", "referral_list_price_cents",
                                   "referral_discount_bps", "commission_bps")}
     draft = client.post("/v1/products/campaign-draft", headers=h, json={"product": facts, "offer": offer}).json()
-    assert "$39" in draft["story"] and draft["missing_evidence"] == []
+    assert f"${offer['founding_price_cents'] // 100}" in draft["story"] and draft["missing_evidence"] == []
     assert draft["founding_price_cents"] == offer["founding_price_cents"]
 
     campaign = {"slug": "shipnote", "headline": draft["headline"], "summary": draft["summary"],
@@ -142,3 +146,8 @@ def test_one_step_new_campaign(client, auth, db) -> None:
     bad = {**campaign, "slug": "shipnote-2", "commission_bps": 6000}
     assert client.post("/v1/products", headers=h, json={**PRODUCT, "campaign": bad}).status_code == 422
     assert client.get("/v1/me", headers=h).json() == before
+
+
+def test_dollar_amounts_ignore_punctuation() -> None:
+    from app.money import dollar_amounts_cents
+    assert dollar_amounts_cents("Pay $119, then $1,234.5. Or $9.60!") == [11900, 123450, 960]

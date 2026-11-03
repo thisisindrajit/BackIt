@@ -1,7 +1,6 @@
 """Payout previews, approval and execution. All amounts are computed here, never by AI."""
 
 import json
-import re
 from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import timedelta
@@ -28,7 +27,7 @@ from app.models import (
     Refund,
     RiskFlag,
 )
-from app.money import format_usd
+from app.money import dollar_amounts_cents, format_usd
 from app.providers import ai
 from app.providers.paypal import PayoutBatchResult, PayoutItemRequest, PayPalProvider, ProviderError
 from app.schemas import ApproveIn
@@ -198,21 +197,16 @@ def _template_explanation(elig: Eligibility) -> str:
     return " ".join(parts)
 
 
-_AMOUNT_RE = re.compile(r"\$[\d,]+(?:\.\d{2})?")
-
-
 def _explain(db: Session, user: Profile, elig: Eligibility) -> tuple[str, str, str]:
     template = _template_explanation(elig)
-    allowed = {format_usd(elig.total_cents)}
-    allowed |= {format_usd(i["amount_cents"]) for i in elig.items}
-    allowed |= {format_usd(e["amount_cents"]) for e in elig.exclusions}
-    allowed.add(format_usd(get_settings().payout_minimum_cents))
-    allowed_plain = {a.replace(".00", "") for a in allowed} | allowed
+    allowed = {elig.total_cents, get_settings().payout_minimum_cents}
+    allowed |= {i["amount_cents"] for i in elig.items}
+    allowed |= {e["amount_cents"] for e in elig.exclusions}
 
     def check(out: _Explanation) -> None:
-        for amount in _AMOUNT_RE.findall(out.text):
-            if amount not in allowed_plain:
-                raise ValueError(f"explanation mentions unknown amount {amount}")
+        for cents in dollar_amounts_cents(out.text):
+            if cents not in allowed:
+                raise ValueError(f"explanation mentions unknown amount {format_usd(cents)}")
 
     facts = {
         "items": [{"backer": i["backer_name"], "amount": format_usd(i["amount_cents"])}

@@ -43,7 +43,7 @@ def _openrouter_call(system: str, user: str, schema: type[BaseModel], name: str)
             "json_schema": {"name": name, "strict": True, "schema": _strict_schema(schema)},
         },
         "temperature": 0.4,
-        "max_tokens": 2400,
+        "max_tokens": 6000,
     }
     headers = {
         "Authorization": f"Bearer {settings.openrouter_api_key}",
@@ -60,7 +60,10 @@ def _openrouter_call(system: str, user: str, schema: type[BaseModel], name: str)
     if resp.status_code != 200:
         raise AiUnavailable(f"OpenRouter returned {resp.status_code}")
     data = resp.json()
-    content = data["choices"][0]["message"]["content"]
+    choice = data["choices"][0]
+    if choice.get("finish_reason") == "length":
+        raise ValueError("output truncated at max_tokens")
+    content = choice["message"]["content"]
     if not isinstance(content, str):
         raise AiUnavailable("OpenRouter returned non-text content")
     return content, data.get("usage") or {}
@@ -113,10 +116,18 @@ def generate(
     output: T
     source: Source
     try:
-        content, usage = _openrouter_call(system, user, schema, purpose)
-        output = schema.model_validate(json.loads(content))
-        if post_validate:
-            post_validate(output)
+        for attempt in range(2):
+            try:
+                content, usage = _openrouter_call(system, user, schema, purpose)
+                output = schema.model_validate(json.loads(content))
+                if post_validate:
+                    post_validate(output)
+                break
+            except (ValueError, ValidationError) as exc:
+                # One retry: structured output occasionally comes back truncated or fails a check.
+                if attempt == 1:
+                    raise
+                logger.info("Retrying AI generation for %s after %s", purpose, type(exc).__name__)
         source = "ai"
         run.source = "ai"
         run.status = "ok"

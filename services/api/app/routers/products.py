@@ -40,13 +40,17 @@ def create_product(body: ProductCreate, user: CurrentUserDep, db: DBDep) -> Prod
 def draft_new_campaign(body: NewCampaignDraftIn, user: CurrentUserDep, db: DBDep) -> CampaignDraft:
     """Draft campaign copy from unsaved product details, for the one-step new-campaign page."""
     offer = body.offer.model_dump() if body.offer else None
-    return campaign_service.generate_draft(db, user, body.product, body.source_text, offer)
+    result = campaign_service.generate_draft(db, user, body.product, body.source_text, offer)
+    db.commit()  # keep the ai_runs record
+    return result
 
 
 @router.post("/offer-suggestion")
 def suggest_new_offer(body: NewOfferSuggestionIn, user: CurrentUserDep, db: DBDep) -> OfferSuggestion:
     """AI-suggested offer from unsaved product details."""
-    return offer_service.suggest_offer(db, user, body.product, body.notes, body.list_price_cents)
+    result = offer_service.suggest_offer(db, user, body.product, body.notes, body.list_price_cents)
+    db.commit()  # keep the ai_runs record
+    return result
 
 
 @router.get("/{product_id}")
@@ -112,7 +116,9 @@ def suggest_offer(
 ) -> OfferSuggestion:
     """AI-suggested founding and referral terms, validated and projected server-side."""
     product = owned_product(db, product_id, user)
-    return offer_service.suggest_offer(db, user, product, body.notes, body.list_price_cents)
+    result = offer_service.suggest_offer(db, user, product, body.notes, body.list_price_cents)
+    db.commit()  # keep the ai_runs record
+    return result
 
 
 @router.post("/{product_id}/campaign-draft")
@@ -120,4 +126,6 @@ def draft_campaign(
     product_id: str, body: CampaignDraftIn, user: CurrentUserDep, db: DBDep
 ) -> CampaignDraft:
     product = owned_product(db, product_id, user)
-    return campaign_service.generate_draft(db, user, product, body.source_text)
+    result = campaign_service.generate_draft(db, user, product, body.source_text)
+    db.commit()  # keep the ai_runs record
+    return result
