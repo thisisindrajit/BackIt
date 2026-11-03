@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
+import { ArrowRightIcon } from "lucide-react";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import { ErrorState } from "@/components/backit/error-state";
 import { FoundingSeal } from "@/components/backit/founding-seal";
@@ -92,7 +93,20 @@ export default function OverviewPage() {
 
       <Pulse products={data.products} />
 
-      <Section title="Your campaigns">
+      <Section
+        title="Your campaigns"
+        action={
+          data.products.length ? (
+            <Link
+              href="/app/products"
+              className="group/all flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-sm text-foreground/70 outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+            >
+              Show all
+              <ArrowRightIcon className="size-3.5 transition-transform duration-200 group-hover/all:translate-x-0.5" aria-hidden />
+            </Link>
+          ) : null
+        }
+      >
         {data.products.length ? (
           <div className={tileGrid}>
             {data.products.map((p, i) => (
@@ -154,10 +168,13 @@ export default function OverviewPage() {
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, action, children }: { title: string; action?: React.ReactNode; children: React.ReactNode }) {
   return (
     <section className="flex flex-col gap-5">
-      <h2 className="text-2xl">{title}</h2>
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-2xl">{title}</h2>
+        {action}
+      </div>
       {children}
     </section>
   );

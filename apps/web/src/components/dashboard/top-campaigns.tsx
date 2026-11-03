@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRightIcon, FlameIcon } from "lucide-react";
+import { FlameIcon } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { covers } from "@/components/backit/covers";
 import { cn } from "@/lib/utils";
@@ -32,13 +32,6 @@ export function TopCampaigns({ products, limit = 3 }: { products?: ProductSummar
           </h3>
           <p className="text-sm text-pretty text-foreground/70">Your live campaigns, ranked by backers.</p>
         </div>
-        <Link
-          href="/app/products"
-          className="group/all flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-sm text-foreground/70 outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
-        >
-          Show all
-          <ArrowRightIcon className="size-3.5 transition-transform duration-200 group-hover/all:translate-x-0.5" aria-hidden />
-        </Link>
       </div>
 
       {!live ? (
