@@ -53,6 +53,10 @@ def disclosure_text(referral_discount_bps: int, commission_bps: int, list_price_
     )
 
 
+def _threshold_label() -> str:
+    return format_usd(get_settings().revenue_threshold_cents).removesuffix(".00")
+
+
 def missing_evidence(db: Session, product: Product) -> list[str]:
     missing: list[str] = []
     conn = seller_connection(db, product.id)
@@ -62,7 +66,7 @@ def missing_evidence(db: Session, product: Product) -> list[str]:
     if v is None:
         missing.append("Add three months of revenue evidence (demo data is labelled as demo).")
     elif not v.threshold_met:
-        missing.append("Revenue evidence does not meet the $1,000/month threshold for three months.")
+        missing.append(f"Revenue evidence does not meet the {_threshold_label()}/month threshold for three months.")
     elif v.is_demo:
         missing.append("Revenue evidence is demo data, not verified revenue.")
     if not product.webhook_url:
@@ -295,7 +299,7 @@ def readiness(db: Session, campaign: Campaign, product: Product) -> Readiness:
             else f"Seller status: {conn.status if conn else 'not_connected'}",
         ),
         ReadinessCheck(
-            key="verification", label="Revenue threshold met (3 months >= $1,000)",
+            key="verification", label=f"Revenue threshold met (3 months >= {_threshold_label()})",
             ok=bool(v and v.threshold_met),
             detail="No revenue evidence yet" if v is None
             else "Threshold not met" if not v.threshold_met

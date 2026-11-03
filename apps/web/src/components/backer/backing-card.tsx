@@ -36,7 +36,7 @@ export function BackingCard({ backing: b }: { backing: Backing }) {
 
   async function draft() {
     const res = await run("draft", () =>
-      authedApi<ShareDrafts>(`/backings/${b.id}/share-drafts`, { method: "POST", body: { channel, context: context || null } }),
+      authedApi<ShareDrafts>(`/backings/${b.id}/share-drafts`, { method: "POST", readOnly: true, body: { channel, context: context || null } }),
     );
     if (res) setDrafts(res);
   }

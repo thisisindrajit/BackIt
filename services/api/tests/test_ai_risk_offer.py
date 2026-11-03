@@ -151,3 +151,13 @@ def test_one_step_new_campaign(client, auth, db) -> None:
 def test_dollar_amounts_ignore_punctuation() -> None:
     from app.money import dollar_amounts_cents
     assert dollar_amounts_cents("Pay $119, then $1,234.5. Or $9.60!") == [11900, 123450, 960]
+
+
+def test_revenue_threshold_is_100_dollars(client, auth) -> None:
+    h = auth("small", "small@example.com", "Small Builder")
+    assert client.get("/v1/config").json()["revenue_threshold_cents"] == 10_000
+    product = client.post("/v1/products", headers=h, json={**PRODUCT, "name": "Tiny"}).json()
+    url = f"/v1/products/{product['id']}/verification/demo"
+    v = client.post(url, headers=h, json={"months": [10_000, 25_000, 12_000]}).json()
+    assert v["threshold_met"] is True and v["threshold_cents"] == 10_000
+    assert client.post(url, headers=h, json={"months": [10_000, 9_999, 12_000]}).json()["threshold_met"] is False

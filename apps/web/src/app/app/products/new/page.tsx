@@ -98,7 +98,7 @@ export default function NewCampaignPage() {
 
   async function writeStory() {
     const d = await run("draft", () =>
-      authedApi<CampaignDraft>("/products/campaign-draft", { method: "POST", body: { product: facts(), offer: offerOrNull() } }),
+      authedApi<CampaignDraft>("/products/campaign-draft", { method: "POST", readOnly: true, body: { product: facts(), offer: offerOrNull() } }),
     );
     if (d) {
       setValues((v) => ({ ...v, headline: d.headline.slice(0, 160), summary: d.summary, story: d.story }));
@@ -201,7 +201,7 @@ export default function NewCampaignPage() {
                 // The untouched default list price is a placeholder; let the server read the real price from the description.
                 const listCents = values.referral_list_price === initialCampaign.referral_list_price ? NaN : dollarsToCents(values.referral_list_price);
                 return authedApi<OfferSuggestion>("/products/offer-suggestion", {
-                  method: "POST",
+                  method: "POST", readOnly: true,
                   body: { product: facts(), list_price_cents: Number.isFinite(listCents) && listCents >= 100 ? listCents : null },
                 });
               }}

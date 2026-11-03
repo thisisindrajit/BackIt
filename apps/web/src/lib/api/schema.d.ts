@@ -1650,6 +1650,8 @@ export interface components {
             hold_days: number;
             /** Payout Minimum Cents */
             payout_minimum_cents: number;
+            /** Revenue Threshold Cents */
+            revenue_threshold_cents: number;
             /**
              * Environment
              * @enum {string}

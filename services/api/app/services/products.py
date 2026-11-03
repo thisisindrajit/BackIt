@@ -18,8 +18,6 @@ from app.services import campaigns as campaign_service
 from app.services.common import audit, conflict
 from app.webhooks_out import UnsafeDestination, validate_destination
 
-VERIFICATION_THRESHOLD_CENTS = 100_000
-
 
 def _slugify(name: str) -> str:
     slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")[:40] or "product"
@@ -192,6 +190,7 @@ def _last_complete_months(count: int, now: datetime) -> list[str]:
 
 def demo_verification(db: Session, user: Profile, product: Product,
                       months: list[int]) -> RevenueVerification:
+    threshold = get_settings().revenue_threshold_cents
     now = utcnow()
     labels = _last_complete_months(3, now.astimezone(UTC))
     rows = [{"month": m, "revenue_cents": v} for m, v in zip(labels, months, strict=True)]
@@ -201,8 +200,8 @@ def demo_verification(db: Session, user: Profile, product: Product,
         source="demo",
         is_demo=True,
         months=rows,
-        threshold_cents=VERIFICATION_THRESHOLD_CENTS,
-        threshold_met=all(v >= VERIFICATION_THRESHOLD_CENTS for v in months),
+        threshold_cents=threshold,
+        threshold_met=all(v >= threshold for v in months),
         checked_at=now,
     )
     db.add(verification)

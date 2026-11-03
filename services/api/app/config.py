@@ -43,6 +43,8 @@ class Settings(BaseSettings):
     platform_fee_bps: int = Field(default=800, ge=0, le=5000)
     hold_days: int = Field(default=30, ge=0)
     payout_minimum_cents: int = Field(default=100, ge=1)
+    # Each of the last three months must reach this before a campaign can publish.
+    revenue_threshold_cents: int = Field(default=10_000, ge=0)
     reservation_minutes: int = 15
     payout_preview_ttl_minutes: int = 30
     sandbox_payout_budget_cents: int = 100_000

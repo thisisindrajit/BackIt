@@ -16,5 +16,6 @@ def get_config() -> PublicConfig:
         platform_fee_bps=s.platform_fee_bps,
         hold_days=s.hold_days,
         payout_minimum_cents=s.payout_minimum_cents,
+        revenue_threshold_cents=s.revenue_threshold_cents,
         environment=s.environment,
     )

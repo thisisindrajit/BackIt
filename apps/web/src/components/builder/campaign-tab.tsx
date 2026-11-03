@@ -1,7 +1,7 @@
 "use client";
 
 import { CheckIcon, SparklesIcon, XIcon } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -60,7 +60,7 @@ function DraftStart({ product, onDraft }: { product: Product; onDraft: (d: Campa
 
   async function generate() {
     const d = await run("draft", () =>
-      authedApi<CampaignDraft>(`/products/${product.id}/campaign-draft`, { method: "POST", body: { source_text: text || null } }),
+      authedApi<CampaignDraft>(`/products/${product.id}/campaign-draft`, { method: "POST", readOnly: true, body: { source_text: text || null } }),
     );
     if (d) onDraft(d);
   }
@@ -187,7 +187,7 @@ function CampaignForm({ product, campaign, draft, onSaved }: { product: Product;
                 request={() => {
                   const listCents = dollarsToCents(values.referral_list_price);
                   return authedApi<OfferSuggestion>(`/products/${product.id}/offer-suggestion`, {
-                    method: "POST",
+                    method: "POST", readOnly: true,
                     body: {
                       notes: [product.description, values.summary].filter(Boolean).join("\n\n").slice(0, 2000) || null,
                       list_price_cents: Number.isFinite(listCents) && listCents >= 100 ? listCents : null,
@@ -248,13 +248,6 @@ function CampaignForm({ product, campaign, draft, onSaved }: { product: Product;
 function ReadinessPanel({ campaign, onPublished }: { campaign: Campaign; onPublished: () => void }) {
   const { data: readiness, reload: load } = useApi<Readiness>(campaign.status === "published" ? null : `/campaigns/${campaign.id}/readiness`);
   const { pending, run } = useAction();
-
-  const seen = useRef(campaign.updated_at);
-  useEffect(() => {
-    if (seen.current === campaign.updated_at) return;
-    seen.current = campaign.updated_at;
-    void load();
-  }, [load, campaign.updated_at]);
 
   async function publish() {
     try {

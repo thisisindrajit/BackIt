@@ -3,9 +3,10 @@
 import { useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ApiError } from "@/lib/api/client";
+import { registerQueryClient } from "@/lib/data-sync";
 
 function makeClient() {
-  return new QueryClient({
+  const client = new QueryClient({
     defaultOptions: {
       queries: {
         staleTime: 30_000,
@@ -14,6 +15,8 @@ function makeClient() {
       },
     },
   });
+  registerQueryClient(client);
+  return client;
 }
 
 export function QueryProvider({ children }: { children: React.ReactNode }) {

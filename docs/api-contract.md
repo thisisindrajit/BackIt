@@ -15,7 +15,7 @@ Shared contract between `apps/web` (Next.js) and `services/api` (FastAPI). Once 
 
 ## Config
 
-`GET /config` (public) -> `{ paypal_mode: "mock"|"sandbox", paypal_client_id: str|null, ai_enabled: bool, platform_fee_bps: 800, hold_days: 30, payout_minimum_cents: 100, environment: "development"|"production" }`
+`GET /config` (public) -> `{ paypal_mode: "mock"|"sandbox", paypal_client_id: str|null, ai_enabled: bool, platform_fee_bps: 800, hold_days: 30, payout_minimum_cents: 100, revenue_threshold_cents: 10000, environment: "development"|"production" }`
 
 ## Identity
 
@@ -42,7 +42,7 @@ Product {
   created_at
 }
 SellerConnection { status: "not_connected"|"pending"|"connected"|"failed", merchant_id: str|null, provider: "mock"|"paypal_sandbox", checked_at: str|null, payments_receivable: bool }
-Verification { source: "demo"|"paypal"|"stripe", is_demo: bool, months: [{ month: "YYYY-MM", revenue_cents }], threshold_cents: 100000, threshold_met: bool, checked_at }
+Verification { source: "demo"|"paypal"|"stripe", is_demo: bool, months: [{ month: "YYYY-MM", revenue_cents }], threshold_cents: 10000, threshold_met: bool, checked_at }
 ```
 
 - `POST /products` `{ name, url, description, access_terms, refund_terms?, webhook_url? }` -> `ProductCreated` = `Product` + `webhook_secret` (the full secret is returned once).
@@ -51,7 +51,7 @@ Verification { source: "demo"|"paypal"|"stripe", is_demo: bool, months: [{ month
 - `POST /products/{id}/webhook-secret/rotate` -> `{ webhook_secret }`.
 - `POST /products/{id}/paypal/onboarding` -> `{ status, action_url: str|null }` (mock connects immediately; sandbox returns a Partner Referrals link).
 - `GET /products/{id}/paypal/status` -> `SellerConnection` (server-side capability check).
-- `POST /products/{id}/verification/demo` `{ months: [revenue_cents, revenue_cents, revenue_cents] }` (oldest first) -> `Verification` with `is_demo: true`. Threshold: each of three consecutive months >= 100000 cents.
+- `POST /products/{id}/verification/demo` `{ months: [revenue_cents, revenue_cents, revenue_cents] }` (oldest first) -> `Verification` with `is_demo: true`. Threshold: each of three consecutive months >= `revenue_threshold_cents` (default 10000 cents = $100, see `GET /config`).
 - `POST /products/{id}/webhook-test` -> `WebhookDelivery` (sends a `ping` event).
 
 ## Campaigns

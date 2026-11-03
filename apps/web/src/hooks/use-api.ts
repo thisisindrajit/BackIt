@@ -4,6 +4,7 @@ import { useCallback } from "react";
 import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
 import { authClient } from "@/lib/auth-client";
 import { api, ApiError } from "@/lib/api/client";
+import { dataChanged } from "@/lib/data-sync";
 
 let cached: { token: string; exp: number } | null = null;
 
@@ -21,10 +22,15 @@ export function clearTokenCache() {
   cached = null;
 }
 
-type CallOptions = Omit<Parameters<typeof api>[1], "token">;
+type CallOptions = Omit<NonNullable<Parameters<typeof api>[1]>, "token"> & {
+  /** For POSTs that only compute something (AI drafts, suggestions) and change no saved data. */
+  readOnly?: boolean;
+};
 
-export function authedApi<T>(path: string, options: CallOptions = {}) {
-  return getToken().then((token) => api<T>(path, { ...options, token }));
+export async function authedApi<T>(path: string, { readOnly, ...options }: CallOptions = {}) {
+  const result = await api<T>(path, { ...options, token: await getToken() });
+  if ((options.method ?? "GET") !== "GET" && !readOnly) dataChanged();
+  return result;
 }
 
 export const apiKey = (path: string) => ["api", path] as const;

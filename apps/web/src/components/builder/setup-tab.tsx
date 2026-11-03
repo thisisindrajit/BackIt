@@ -12,6 +12,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { StatusBadge } from "@/components/backit/status-badge";
 import { authedApi } from "@/hooks/use-api";
+import { useConfig } from "@/hooks/use-config";
 import { dollarsToCents, money, monthLabel, shortDate } from "@/lib/format";
 import type { Product, WebhookDelivery } from "@/lib/api/types";
 import { CopyField } from "./secret-reveal";
@@ -28,6 +29,7 @@ const redeemSnippet = (productId: string) =>
 
 export function SetupTab({ product, onChange }: { product: Product; onChange: () => void }) {
   const { pending, run } = useAction();
+  const config = useConfig();
   const [secret, setSecret] = useState<string | null>(null);
   const [months, setMonths] = useState(["2100", "2350", "2400"]);
   const seller = product.seller;
@@ -113,7 +115,7 @@ export function SetupTab({ product, onChange }: { product: Product; onChange: ()
       <Card>
         <CardHeader>
           <CardTitle>2. Show your revenue</CardTitle>
-          <CardDescription>Campaigns need at least {money(100000)} in each of the last three months. Backers see this on your Trust Card.</CardDescription>
+          <CardDescription>Campaigns need at least {money(config?.revenue_threshold_cents ?? 10000)} in each of the last three months. Backers see this on your Trust Card.</CardDescription>
           <CardAction>{v ? <StatusBadge status={v.threshold_met ? "completed" : "failed"} className="normal-case" /> : null}</CardAction>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">

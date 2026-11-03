@@ -45,6 +45,7 @@ class PublicConfig(BaseModel):
     platform_fee_bps: int
     hold_days: int
     payout_minimum_cents: int
+    revenue_threshold_cents: int
     environment: Literal["development", "production"]
 
 

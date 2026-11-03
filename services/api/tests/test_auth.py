@@ -30,4 +30,5 @@ def test_config_is_public(client: TestClient) -> None:
     r = client.get("/v1/config")
     assert r.json() == {"paypal_mode": "mock", "paypal_client_id": None, "ai_enabled": False,
                         "platform_fee_bps": 800, "hold_days": 30, "payout_minimum_cents": 100,
+                        "revenue_threshold_cents": 10_000,
                         "environment": "development"}
