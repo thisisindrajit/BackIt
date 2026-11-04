@@ -97,10 +97,10 @@ export function SetupTab({ product, onChange }: { product: Product; onChange: ()
             </p>
           )}
           <div className="flex flex-wrap gap-2">
-            {seller.status !== "connected" ? (
+            {seller.status !== "connected" || seller.provider === "mock" ? (
               <Button onClick={connect} disabled={pending === "connect"}>
                 {pending === "connect" ? <Spinner data-icon="inline-start" /> : null}
-                Connect PayPal
+                {seller.provider === "mock" && seller.status === "connected" ? "Connect real PayPal" : "Connect PayPal"}
               </Button>
             ) : null}
             {seller.status === "pending" ? (

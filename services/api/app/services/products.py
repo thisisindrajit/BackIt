@@ -130,8 +130,13 @@ def _ensure_connection(db: Session, product: Product) -> SellerConnection:
 def start_onboarding(db: Session, user: Profile, product: Product,
                      paypal: PayPalProvider) -> SellerConnection:
     conn = _ensure_connection(db, product)
-    if conn.status == "connected":
+    if conn.status == "connected" and conn.provider == paypal.name:
         return conn
+    if conn.provider != paypal.name:
+        # A seller connected through another provider (e.g. the mock seller) must re-onboard.
+        conn.merchant_id = None
+        conn.payments_receivable = False
+        conn.capabilities = {}
     return_url = (
         f"{get_settings().web_base_url.rstrip('/')}/app/products/{product.id}?tab=setup"
     )

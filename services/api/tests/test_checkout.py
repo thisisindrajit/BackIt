@@ -29,6 +29,28 @@ def test_paypal_onboarding_returns_to_product_setup(client, auth, monkeypatch) -
     assert return_urls == [f"http://localhost:3000/app/products/{product['id']}?tab=setup"]
 
 
+def test_mock_seller_can_reconnect_with_real_paypal(client, auth, monkeypatch) -> None:
+    headers = auth("builder")
+    product = client.post("/v1/products", headers=headers, json={
+        "name": "Mock first", "url": "https://example.com",
+        "description": "Switch providers", "access_terms": "Lifetime access",
+    }).json()
+    url = f"/v1/products/{product['id']}/paypal/onboarding"
+    assert client.post(url, headers=headers).json()["status"] == "connected"
+
+    paypal = get_paypal()
+    monkeypatch.setattr(type(paypal), "name", "paypal_sandbox", raising=False)
+    monkeypatch.setattr(paypal, "create_referral_link", lambda *, tracking_id, return_url: ReferralLink(
+        action_url="https://www.sandbox.paypal.com/onboarding", status="pending", merchant_id=None,
+    ))
+    response = client.post(url, headers=headers).json()
+    assert response["status"] == "pending"
+    assert response["action_url"] == "https://www.sandbox.paypal.com/onboarding"
+    seller = client.get(f"/v1/products/{product['id']}", headers=headers).json()["seller"]
+    assert seller["provider"] == "paypal_sandbox"
+    assert seller["merchant_id"] is None
+
+
 def test_founding_purchase_assigns_badge_and_code(campaign: dict[str, Any], buy) -> None:
     order = buy(campaign["campaign"]["id"], "alice")
     assert order["state"] == "completed"
