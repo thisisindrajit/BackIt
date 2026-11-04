@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,6 +34,43 @@ export function SetupTab({ product, onChange }: { product: Product; onChange: ()
   const [months, setMonths] = useState(["2100", "2350", "2400"]);
   const seller = product.seller;
   const v = product.verification;
+
+  const sellerPending = seller.status === "pending";
+  const onSellerUpdate = useEffectEvent((status: string) => {
+    if (status === "connected") toast.success("PayPal connected");
+    if (status !== "pending") onChange();
+  });
+
+  // Check PayPal on load, when the seller returns from the PayPal tab, and every few seconds while pending.
+  useEffect(() => {
+    if (!sellerPending) return;
+    let stopped = false;
+    let inFlight = false;
+    const check = async () => {
+      if (stopped || inFlight || document.visibilityState !== "visible") return;
+      inFlight = true;
+      try {
+        const res = await authedApi<{ status: string }>(`/products/${product.id}/paypal/status`);
+        if (!stopped) onSellerUpdate(res.status);
+      } catch {
+        // PayPal can lag right after onboarding; the next tick retries.
+      } finally {
+        inFlight = false;
+      }
+    };
+    void check();
+    const timer = window.setInterval(check, 5000);
+    const stopTimer = window.setTimeout(() => window.clearInterval(timer), 5 * 60_000);
+    window.addEventListener("focus", check);
+    document.addEventListener("visibilitychange", check);
+    return () => {
+      stopped = true;
+      window.clearInterval(timer);
+      window.clearTimeout(stopTimer);
+      window.removeEventListener("focus", check);
+      document.removeEventListener("visibilitychange", check);
+    };
+  }, [sellerPending, product.id]);
 
   async function connect() {
     const res = await run("connect", () =>
@@ -93,7 +130,7 @@ export function SetupTab({ product, onChange }: { product: Product; onChange: ()
             </dl>
           ) : (
             <p className="text-sm text-muted-foreground">
-              {seller.status === "pending" ? "Finish onboarding in the PayPal tab, then refresh the status here." : "You need a connected seller account before publishing."}
+              {seller.status === "pending" ? "Finish onboarding in the PayPal tab. This updates automatically when you come back." : "You need a connected seller account before publishing."}
             </p>
           )}
           <div className="flex flex-wrap gap-2">
