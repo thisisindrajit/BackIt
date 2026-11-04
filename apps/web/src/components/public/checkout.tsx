@@ -29,7 +29,7 @@ const accessCopy: Record<Order["access"]["status"], string> = {
   not_configured: "Redeem the code above in the product to unlock your plan.",
 };
 
-export function Checkout({ orderId }: { orderId: string }) {
+export function Checkout({ orderId, approved = false }: { orderId: string; approved?: boolean }) {
   const router = useRouter();
   const config = useConfig();
   const { data: order, setData, error, loading, reload } = useApi<Order>(`/orders/${orderId}`);
@@ -50,6 +50,17 @@ export function Checkout({ orderId }: { orderId: string }) {
     const o = await run("capture", () => authedApi<Order>(`/orders/${orderId}/capture`, { method: "POST", idempotencyKey: `capture-${orderId}` }));
     if (o) setData(o);
   }
+
+  // Buyer came back from PayPal's full-page approval: capture once, then drop the flag from the URL.
+  const autoCaptured = useRef(false);
+  const shouldAutoCapture = approved && order?.state === "created";
+  useEffect(() => {
+    if (!shouldAutoCapture || autoCaptured.current) return;
+    autoCaptured.current = true;
+    router.replace(`/checkout/${orderId}`);
+    void capture();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shouldAutoCapture]);
 
   async function cancel() {
     const o = await run("cancel", () => authedApi<Order>(`/orders/${orderId}/cancel`, { method: "POST" }));
@@ -164,7 +175,7 @@ export function Checkout({ orderId }: { orderId: string }) {
       </CardContent>
       <CardFooter className="flex flex-col items-stretch gap-3">
         {config.paypal_mode === "sandbox" && config.paypal_client_id && order.paypal_order_id ? (
-          <PayPalButton clientId={config.paypal_client_id} paypalOrderId={order.paypal_order_id} onApprove={capture} disabled={pending !== null} />
+          <PayPalButton clientId={config.paypal_client_id} paypalOrderId={order.paypal_order_id} approveUrl={order.approve_url} onApprove={capture} disabled={pending !== null} />
         ) : (
           <>
             <Button size="lg" onClick={capture} disabled={pending !== null}>

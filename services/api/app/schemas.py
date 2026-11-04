@@ -484,6 +484,7 @@ class OrderOut(BaseModel):
     referral_code: str | None
     provider: Literal["mock", "paypal_sandbox"]
     paypal_order_id: str | None
+    approve_url: str | None
     reservation_expires_at: str | None
     backing: OrderBacking | None
     access: OrderAccess

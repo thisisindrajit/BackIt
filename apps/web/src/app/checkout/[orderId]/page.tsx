@@ -4,8 +4,8 @@ import { Checkout } from "@/components/public/checkout";
 
 export const metadata: Metadata = { title: "Checkout" };
 
-export default async function CheckoutPage({ params }: PageProps<"/checkout/[orderId]">) {
-  const { orderId } = await params;
+export default async function CheckoutPage({ params, searchParams }: PageProps<"/checkout/[orderId]">) {
+  const [{ orderId }, query] = await Promise.all([params, searchParams]);
   return (
     <div className="flex min-h-svh flex-col">
       <header className="border-b">
@@ -14,7 +14,7 @@ export default async function CheckoutPage({ params }: PageProps<"/checkout/[ord
         </div>
       </header>
       <main className="mx-auto flex w-full max-w-xl flex-col gap-6 px-4 py-10 sm:px-6">
-        <Checkout orderId={orderId} />
+        <Checkout orderId={orderId} approved={query.approved === "1"} />
       </main>
     </div>
   );

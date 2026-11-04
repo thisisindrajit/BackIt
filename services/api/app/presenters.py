@@ -193,6 +193,7 @@ def order_out(db: Session, order: Order) -> OrderOut:
         referral_code=order.referral_code,
         provider=order.provider,  # type: ignore[arg-type]
         paypal_order_id=order.paypal_order_id,
+        approve_url=order.approve_url if order.state == "created" else None,
         reservation_expires_at=iso(order.reservation_expires_at)
         if order.state == "created"
         else None,

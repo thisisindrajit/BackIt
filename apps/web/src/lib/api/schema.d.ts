@@ -1329,6 +1329,8 @@ export interface components {
             provider: "mock" | "paypal_sandbox";
             /** Paypal Order Id */
             paypal_order_id: string | null;
+            /** Approve Url */
+            approve_url: string | null;
             /** Reservation Expires At */
             reservation_expires_at: string | null;
             backing: components["schemas"]["OrderBacking"] | null;

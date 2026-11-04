@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 
-type Session = { start: (opts: { presentationMode: "auto" }, order: Promise<{ orderId: string }>) => Promise<void> };
+type Session = { start: (opts: { presentationMode: "popup" }, order: Promise<{ orderId: string }>) => Promise<void> };
 type Sdk = {
   createPayPalOneTimePaymentSession: (handlers: {
     onApprove: (data: { orderId: string }) => Promise<void>;
@@ -33,7 +33,7 @@ function loadSdk() {
   });
 }
 
-export function PayPalButton({ clientId, paypalOrderId, onApprove, disabled }: { clientId: string; paypalOrderId: string; onApprove: () => Promise<void>; disabled?: boolean }) {
+export function PayPalButton({ clientId, paypalOrderId, approveUrl, onApprove, disabled }: { clientId: string; paypalOrderId: string; approveUrl: string | null; onApprove: () => Promise<void>; disabled?: boolean }) {
   const session = useRef<Session | null>(null);
   const [ready, setReady] = useState(false);
   const approveRef = useRef(onApprove);
@@ -60,11 +60,26 @@ export function PayPalButton({ clientId, paypalOrderId, onApprove, disabled }: {
     };
   }, [clientId]);
 
+  // Popup keeps the buyer on BackIt. PayPal refuses to render inside a frame, so if the popup
+  // can't open we send the buyer to PayPal's page, which returns to /checkout/[id]/return.
+  async function pay() {
+    const redirect = () => {
+      if (approveUrl) window.location.assign(approveUrl);
+      else toast.error("PayPal couldn't open. Allow pop-ups for backit.club and try again.");
+    };
+    if (!session.current) return redirect();
+    try {
+      await session.current.start({ presentationMode: "popup" }, Promise.resolve({ orderId: paypalOrderId }));
+    } catch {
+      redirect();
+    }
+  }
+
   return (
     <Button
       size="lg"
-      disabled={!ready || disabled}
-      onClick={() => session.current?.start({ presentationMode: "auto" }, Promise.resolve({ orderId: paypalOrderId }))}
+      disabled={(!ready && !approveUrl) || disabled}
+      onClick={pay}
     >
       {!ready ? <Spinner data-icon="inline-start" /> : null}
       Pay with PayPal
