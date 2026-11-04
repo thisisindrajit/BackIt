@@ -19,6 +19,7 @@ from app.security import public_ref
 from app.services.claims import generate_claim_code
 from app.services.common import audit, conflict
 from app.services.ledger import append_ledger, raise_flag
+from app.services.notifications import notify_sale
 from app.services.risk import evaluate_referral_purchase
 from app.webhooks_out import enqueue_event
 
@@ -364,10 +365,10 @@ def finalize_capture(db: Session, order: Order, result: CaptureResult, *, source
         public_ref=order_ref, order_id=order.id, backing_id=backing.id, occurred_at=now,
     )
 
+    commission: Commission | None = None
     if order.kind == "referral" and order.referrer_backing_id:
         referrer = db.get(Backing, order.referrer_backing_id)
         assert referrer is not None
-        commission = None
         if order.commission_cents > 0:
             commission = Commission(
                 id=new_id("com"),
@@ -403,6 +404,9 @@ def finalize_capture(db: Session, order: Order, result: CaptureResult, *, source
             "currency": order.currency,
             "referral_id": order.referrer_backing_id,
         }, order_id=order.id)
+
+    notify_sale(db, order=order, campaign=campaign, product=product, buyer=buyer,
+                backing=backing, commission=commission)
 
     audit(db, actor_id=None, action="order.completed", target_type="order", target_id=order.id,
           details={"source": source, "provider": order.provider, "backing_id": backing.id,

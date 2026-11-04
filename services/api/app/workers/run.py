@@ -5,7 +5,8 @@ Each pass:
 2. releases matured commission holds (held -> payable),
 3. processes verified PayPal webhook events from the inbox,
 4. runs due outbox jobs (payout execution / reconciliation),
-5. delivers due builder webhooks.
+5. delivers due builder webhooks,
+6. sends due notification emails (Resend).
 
 Rows are claimed with SELECT ... FOR UPDATE SKIP LOCKED plus a lease, so several workers can
 run safely. Failures back off exponentially with jitter until max attempts, then go `dead`.
@@ -26,6 +27,7 @@ from app.models import OutboxJob, ProviderEvent, WebhookDelivery
 from app.providers.paypal import PayPalProvider, get_paypal
 from app.services.checkout import expire_stale_orders
 from app.services.deliveries import claim_due
+from app.services.notifications import send_due_emails
 from app.services.payouts import RetryLater, execute_batch
 from app.services.provider_events import process_event
 from app.services.refunds import release_matured_holds
@@ -150,7 +152,7 @@ def run_event(db: Session, event_id: str, paypal: PayPalProvider) -> None:
 
 def run_once(paypal: PayPalProvider | None = None) -> dict[str, int]:
     paypal = paypal or get_paypal()
-    stats = {"expired": 0, "released": 0, "events": 0, "jobs": 0, "deliveries": 0}
+    stats = {"expired": 0, "released": 0, "events": 0, "jobs": 0, "deliveries": 0, "emails": 0}
     with SessionLocal() as db:
         stats["expired"] = expire_stale_orders(db, paypal)
         stats["released"] = release_matured_holds(db)
@@ -167,6 +169,7 @@ def run_once(paypal: PayPalProvider | None = None) -> dict[str, int]:
                 attempt_delivery(db, delivery)
                 db.commit()
                 stats["deliveries"] += 1
+        stats["emails"] = send_due_emails(db)
     return stats
 
 

@@ -26,3 +26,5 @@ export type PayoutBatch = S["PayoutBatchOut"];
 export type Activity = S["Activity"];
 export type RiskAssessment = S["RiskAssessmentOut"];
 export type OfferSuggestion = S["OfferSuggestion"];
+export type Notification = S["NotificationOut"];
+export type NotificationList = S["NotificationList"];

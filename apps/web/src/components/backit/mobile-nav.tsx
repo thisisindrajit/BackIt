@@ -17,6 +17,7 @@ import {
 import { usePrefetch } from "@/hooks/use-api";
 import { cn } from "@/lib/utils";
 import { initialsOf, isNavActive, mainNav, settingsNav, useSignOut } from "./app-nav";
+import { NotificationBell } from "./notification-bell";
 import { Wordmark } from "./wordmark";
 
 const tabs = [...mainNav, settingsNav];
@@ -28,11 +29,14 @@ export function MobileHeader({ name, email }: { name: string; email: string }) {
     <header className="safe-x sticky top-0 z-30 flex items-center gap-2 bg-background/85 pt-[env(safe-area-inset-top)] backdrop-blur-md md:hidden">
       <div className="flex h-14 w-full items-center gap-2">
         <Wordmark href="/app" />
+        <div className="ml-auto">
+          <NotificationBell />
+        </div>
         <Button
           render={<Link href="/app/products/new" />}
           nativeButton={false}
           size="icon"
-          className="ml-auto rounded-full"
+          className="rounded-full"
           aria-label="New campaign"
         >
           <PlusIcon />

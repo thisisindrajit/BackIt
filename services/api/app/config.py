@@ -37,6 +37,13 @@ class Settings(BaseSettings):
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
     ai_timeout_seconds: float = 45.0
 
+    # Transactional email through Resend. Without a key, emails are marked `skipped`.
+    resend_api_key: str | None = None
+    email_from: str = "BackIt <notifications@backit.club>"
+    email_reply_to: str | None = None
+    email_timeout_seconds: float = 8.0
+    email_max_attempts: int = 6
+
     # Used to encrypt builder webhook secrets at rest and to derive public ledger refs.
     app_encryption_key: str | None = None
 

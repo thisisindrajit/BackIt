@@ -8,6 +8,7 @@ from app.schemas import OrderOut
 from app.services import checkout
 from app.services.deliveries import deliver_now
 from app.services.idempotency import run_idempotent
+from app.services.notifications import send_order_emails
 from app.services.refunds import refund_order
 
 router = APIRouter(prefix="/orders", tags=["orders"])
@@ -41,6 +42,7 @@ def capture_order(
         order = checkout.capture(db, user, order_id, paypal)
         if order.state == "completed":
             _deliver_pending(db, order.id)
+            send_order_emails(db, order.id)
         return (202 if order.state == "pending_provider" else 200), order_out(db, order)
 
     return run_idempotent(  # type: ignore[return-value]

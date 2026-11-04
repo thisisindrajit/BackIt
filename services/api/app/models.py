@@ -613,3 +613,37 @@ class IdempotencyKey(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
+
+
+class Notification(TimestampMixin, Base):
+    """In-app notice for one user, plus an optional email sent through Resend (outbox style)."""
+
+    __tablename__ = "notifications"
+    __table_args__ = (
+        CheckConstraint(_in("kind", ("sale", "referral_sale", "campaign_live")), name="kind"),
+        CheckConstraint(
+            _in("email_state", ("none", "pending", "sent", "failed", "dead", "skipped")),
+            name="email_state",
+        ),
+        Index("ix_notifications_user_id_created_at", "user_id", "created_at"),
+        Index("ix_notifications_email_due", "email_state", "email_next_attempt_at"),
+    )
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True)
+    user_id: Mapped[str] = mapped_column(_fk("profiles.id", "CASCADE"))
+    kind: Mapped[str] = mapped_column(String(24))
+    dedupe_key: Mapped[str] = mapped_column(String(128), unique=True)
+    title: Mapped[str] = mapped_column(String(200))
+    body: Mapped[str] = mapped_column(Text)
+    link: Mapped[str | None] = mapped_column(String(512))
+    campaign_id: Mapped[str | None] = mapped_column(_fk("campaigns.id", "CASCADE"), index=True)
+    order_id: Mapped[str | None] = mapped_column(_fk("orders.id", "CASCADE"), index=True)
+    read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    email_to: Mapped[str | None] = mapped_column(String(320))
+    email_state: Mapped[str] = mapped_column(String(16), default="none")
+    email_attempts: Mapped[int] = mapped_column(Integer, default=0)
+    email_next_attempt_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    email_lease_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    email_last_error: Mapped[str | None] = mapped_column(Text)
+    email_message_id: Mapped[str | None] = mapped_column(String(128))
+    email_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

@@ -7,6 +7,7 @@ from app.routers import (
     claims,
     config,
     me,
+    notifications,
     orders,
     payouts,
     products,
@@ -15,5 +16,7 @@ from app.routers import (
 )
 
 api_router = APIRouter(prefix="/v1")
-for module in (config, me, products, campaigns, public, orders, backings, builder, claims, payouts, webhooks):
+for module in (
+    config, me, notifications, products, campaigns, public, orders, backings, builder, claims, payouts, webhooks,
+):
     api_router.include_router(module.router)

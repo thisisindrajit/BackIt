@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/sidebar";
 import { usePrefetch } from "@/hooks/use-api";
 import { initialsOf, isNavActive, mainNav as main, settingsNav, useSignOut } from "./app-nav";
+import { NotificationBell } from "./notification-bell";
 import { Wordmark } from "./wordmark";
 
 export function AppSidebar({ name, email }: { name: string; email: string }) {
@@ -45,8 +46,9 @@ export function AppSidebar({ name, email }: { name: string; email: string }) {
   return (
     <Sidebar variant="inset">
       <SidebarHeader className="gap-5 px-4 pt-5 pb-2">
-        <div className="px-3">
+        <div className="flex items-center justify-between pl-3">
           <Wordmark href="/app" />
+          <NotificationBell side="bottom" align="start" />
         </div>
         <Button
           render={<Link href="/app/products/new" onClick={() => setOpenMobile(false)} />}

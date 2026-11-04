@@ -736,3 +736,24 @@ class AckOut(BaseModel):
 
 
 ProductCreate.model_rebuild()
+
+
+class NotificationOut(BaseModel):
+    id: str
+    kind: Literal["sale", "referral_sale", "campaign_live"]
+    title: str
+    body: str
+    link: str | None
+    read: bool
+    created_at: str
+
+
+class NotificationList(BaseModel):
+    items: list[NotificationOut]
+    unread_count: int
+
+
+class MarkNotificationsRead(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    ids: list[str] | None = Field(default=None, max_length=100)

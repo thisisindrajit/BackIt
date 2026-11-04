@@ -24,6 +24,7 @@ from app.schemas import (
     ReadinessCheck,
 )
 from app.services.common import audit, campaign_for_product, conflict
+from app.services.notifications import notify_campaign_live
 
 PRICE_FIELDS = (
     "founding_price_cents",
@@ -335,6 +336,7 @@ def publish(db: Session, user: Profile, campaign: Campaign, product: Product) ->
     campaign.status = "published"
     campaign.published_at = utcnow()
     campaign.version += 1
+    notify_campaign_live(db, campaign=campaign, product=product, owner=user)
     audit(db, actor_id=user.id, action="campaign.published", target_type="campaign",
           target_id=campaign.id, details={"version": campaign.version})
     db.commit()
