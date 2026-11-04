@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 
-const COLORS = ["var(--primary)", "var(--secondary)", "#e6d77a", "var(--primary-deep)", "#f3e7a6", "#a9c0a6"];
+const COLORS = ["var(--primary)", "#e2c94f", "var(--primary-deep)", "var(--secondary)", "#d8b84a", "#6f8f6c"];
 const SHAPES = ["h-3.5 w-2 rounded-[2px]", "size-2 rounded-full", "h-4 w-1 rounded-full", "size-2.5 rounded-[2px]"];
 
 // Seeded so every burst looks the same and stays cheap to compute.

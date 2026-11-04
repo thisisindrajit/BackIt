@@ -163,13 +163,15 @@ export function Checkout({ orderId, approved = false }: { orderId: string; appro
                 <dd className="tabular text-right text-primary-deep">−{money(order.discount_cents)}</dd>
               </>
             ) : null}
-            <dt className="mt-2 self-end border-t pt-4 font-medium">You pay</dt>
-            <dd className="tabular mt-2 border-t pt-3 text-right font-display text-4xl leading-none">{money(order.amount_cents)}</dd>
           </dl>
+          <div className="-mt-1 flex items-end justify-between border-t pt-4">
+            <span className="text-sm font-medium">You pay</span>
+            <span className="tabular font-display text-4xl leading-none">{money(order.amount_cents)}</span>
+          </div>
           {heldUntil ? (
             <p className="flex items-center gap-2 rounded-xl bg-accent px-3 py-2 text-xs text-accent-foreground">
               <ClockIcon className="size-3.5 shrink-0" aria-hidden />
-              Your spot is held until {heldUntil}.
+              {founding ? "Your spot is held" : "This price is held"} until {heldUntil}.
             </p>
           ) : null}
         </CardContent>
