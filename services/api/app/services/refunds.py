@@ -67,7 +67,8 @@ def refund_order(db: Session, user: Profile, order_id: str,
     try:
         result = paypal.refund_capture(capture_id=order.paypal_capture_id,
                                        amount_cents=order.amount_cents,
-                                       request_id=f"{refund.id}-refund")
+                                       request_id=f"{refund.id}-refund",
+                                       merchant_id=order.merchant_id)
     except ProviderError as exc:
         if exc.uncertain:
             refund.state = "pending"

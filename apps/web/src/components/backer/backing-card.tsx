@@ -26,6 +26,18 @@ import type { Backing, ShareDrafts } from "@/lib/api/types";
 type Channel = "x" | "linkedin" | "email";
 const channelLabel: Record<Channel, string> = { x: "X", linkedin: "LinkedIn", email: "Email" };
 
+const blockedReasons: Record<string, string> = {
+  self_referral_email: "The buyer used your email, so this counts as buying from yourself.",
+  self_referral_payer: "The same PayPal account paid for your spot and this sale.",
+  payout_email_matches_buyer: "The buyer paid with your payout email.",
+  builder_hold: "The builder is reviewing this sale.",
+  refunded_after_payout: "The sale was refunded after this reward was sent.",
+};
+
+function blockedCopy(reason: string | null) {
+  return (reason && blockedReasons[reason]) ?? "Held for review by the builder.";
+}
+
 export function BackingCard({ backing: b }: { backing: Backing }) {
   const [channel, setChannel] = useState<Channel>("x");
   const [context, setContext] = useState("");
@@ -114,8 +126,13 @@ export function BackingCard({ backing: b }: { backing: Backing }) {
                         <TableCell className="tabular max-sm:hidden">{money(c.paid_cents)}</TableCell>
                         <TableCell>
                           <StatusBadge status={c.state} />
+                          {c.state === "blocked" ? (
+                            <p className="mt-1 max-w-48 text-xs whitespace-normal text-muted-foreground">{blockedCopy(c.blocked_reason)}</p>
+                          ) : null}
                         </TableCell>
-                        <TableCell className="max-sm:hidden">{c.state === "held" ? shortDate(c.release_at) : "Released"}</TableCell>
+                        <TableCell className="max-sm:hidden">
+                          {c.state === "held" ? shortDate(c.release_at) : c.state === "blocked" || c.state === "reversed" ? "Not paid" : "Released"}
+                        </TableCell>
                         <TableCell className="tabular text-right text-foreground">{money(c.amount_cents)}</TableCell>
                       </TableRow>
                     ))}

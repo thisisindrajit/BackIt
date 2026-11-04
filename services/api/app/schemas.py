@@ -521,6 +521,7 @@ class CommissionOut(BaseModel):
     paid_cents: int
     amount_cents: int
     state: CommissionState
+    blocked_reason: str | None
     release_at: str
     created_at: str
 

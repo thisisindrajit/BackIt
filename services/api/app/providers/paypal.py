@@ -3,7 +3,9 @@
 The sandbox implementation only ever talks to https://api-m.sandbox.paypal.com.
 """
 
+import base64
 import hashlib
+import json
 import logging
 import threading
 import time
@@ -110,7 +112,7 @@ class PayPalProvider(Protocol):
     def get_order_status(self, paypal_order_id: str) -> str: ...
 
     def refund_capture(self, *, capture_id: str, amount_cents: int,
-                       request_id: str) -> RefundResult: ...
+                       request_id: str, merchant_id: str | None = None) -> RefundResult: ...
 
     def create_referral_link(self, *, tracking_id: str, return_url: str) -> ReferralLink: ...
 
@@ -165,7 +167,7 @@ class MockPayPal:
         return "CREATED"
 
     def refund_capture(self, *, capture_id: str, amount_cents: int,
-                       request_id: str) -> RefundResult:
+                       request_id: str, merchant_id: str | None = None) -> RefundResult:
         return RefundResult(refund_id=f"MOCKREFUND-{_short_hash(capture_id, length=14)}",
                             status="COMPLETED")
 
@@ -390,13 +392,23 @@ class SandboxPayPal:
         data = self._request("GET", f"/v2/checkout/orders/{paypal_order_id}")
         return str(data.get("status", "UNKNOWN"))
 
+    def _auth_assertion(self, merchant_id: str) -> str:
+        # Unsigned JWT telling PayPal the partner is acting for this seller.
+        def part(d: dict[str, str]) -> str:
+            return base64.urlsafe_b64encode(json.dumps(d).encode()).decode().rstrip("=")
+        claims = {"iss": self.settings.paypal_client_id or "", "payer_id": merchant_id}
+        return f"{part({'alg': 'none'})}.{part(claims)}."
+
     def refund_capture(self, *, capture_id: str, amount_cents: int,
-                       request_id: str) -> RefundResult:
+                       request_id: str, merchant_id: str | None = None) -> RefundResult:
+        headers = {"PayPal-Request-Id": request_id}
+        if merchant_id:
+            headers["PayPal-Auth-Assertion"] = self._auth_assertion(merchant_id)
         data = self._request(
             "POST", f"/v2/payments/captures/{capture_id}/refund",
             json={"amount": {"currency_code": "USD",
                              "value": cents_to_decimal_string(amount_cents)}},
-            headers={"PayPal-Request-Id": request_id},
+            headers=headers,
         )
         status = data.get("status", "PENDING")
         return RefundResult(refund_id=data["id"],

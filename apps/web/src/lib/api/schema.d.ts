@@ -1081,6 +1081,8 @@ export interface components {
              * @enum {string}
              */
             state: "held" | "payable" | "reserved" | "submitted" | "paid" | "reversed" | "blocked";
+            /** Blocked Reason */
+            blocked_reason: string | null;
             /** Release At */
             release_at: string;
             /** Created At */

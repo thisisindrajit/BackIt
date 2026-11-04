@@ -278,6 +278,7 @@ def backing_out(db: Session, backing: Backing) -> BackingOut:
                 paid_cents=paid,
                 amount_cents=c.amount_cents,
                 state=c.state,  # type: ignore[arg-type]
+                blocked_reason=c.blocked_reason if c.state == "blocked" else None,
                 release_at=iso(c.release_at) or "",
                 created_at=iso(c.created_at) or "",
             )
