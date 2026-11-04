@@ -42,9 +42,9 @@ def get_me(user: CurrentUserDep, db: DBDep) -> Me:
     ).all()
     campaigns = {p.id: campaign_for_product(db, p.id) for p in products}
     campaign_ids = [c.id for c in campaigns.values() if c]
-    backer_counts = dict(db.execute(
+    referral_counts = dict(db.execute(
         select(Backing.campaign_id, func.count(Backing.id))
-        .where(Backing.campaign_id.in_(campaign_ids))
+        .where(Backing.campaign_id.in_(campaign_ids), Backing.kind == "referral", Backing.status == "active")
         .group_by(Backing.campaign_id)
     ).all()) if campaign_ids else {}
     summaries = []
@@ -56,7 +56,7 @@ def get_me(user: CurrentUserDep, db: DBDep) -> Me:
             campaign=CampaignRef(
                 id=c.id, slug=c.slug, status=c.status, headline=c.headline,  # type: ignore[arg-type]
                 founding_price_cents=c.founding_price_cents, spots_cap=c.founding_spots_cap,
-                spots_taken=c.founding_spots_taken, backers=backer_counts.get(c.id, 0),
+                spots_taken=c.founding_spots_taken, referral_buyers=referral_counts.get(c.id, 0),
                 published_at=iso(c.published_at),
             ) if c else None,
         ))

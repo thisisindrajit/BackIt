@@ -11,15 +11,15 @@ type Live = ProductSummary & { campaign: NonNullable<ProductSummary["campaign"]>
 
 function pitch(c: Live["campaign"]) {
   const left = c.spots_cap - c.spots_taken;
-  const backers = `${c.backers} ${c.backers === 1 ? "backer" : "backers"}`;
-  if (left > 0 && left <= 10) return `${backers} · only ${left} founding ${left === 1 ? "spot" : "spots"} left`;
-  return `${backers} · ${c.spots_taken}/${c.spots_cap} founding spots`;
+  const referrals = `${c.referral_buyers} referral ${c.referral_buyers === 1 ? "buyer" : "buyers"}`;
+  if (left > 0 && left <= 10) return `${referrals} · only ${left} founding ${left === 1 ? "spot" : "spots"} left`;
+  return `${c.spots_taken}/${c.spots_cap} founding spots · ${referrals}`;
 }
 
 export function TopCampaigns({ products, limit = 3 }: { products?: ProductSummary[]; limit?: number }) {
   const live = products
     ?.filter((p): p is Live => p.campaign?.status === "published")
-    .toSorted((a, b) => b.campaign.backers - a.campaign.backers || b.campaign.spots_taken - a.campaign.spots_taken)
+    .toSorted((a, b) => b.campaign.spots_taken + b.campaign.referral_buyers - (a.campaign.spots_taken + a.campaign.referral_buyers))
     .slice(0, limit);
 
   return (

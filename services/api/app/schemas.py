@@ -68,7 +68,7 @@ class CampaignRef(BaseModel):
     founding_price_cents: int
     spots_cap: int
     spots_taken: int
-    backers: int
+    referral_buyers: int  # active referral purchases; founding backers are spots_taken
     published_at: str | None
 
 

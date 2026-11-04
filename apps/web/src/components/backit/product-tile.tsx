@@ -43,7 +43,7 @@ export function ProductTile({ product: p, index }: { product: Me["products"][num
               className="gap-0"
             />
             <span className="tabular text-sm text-muted-foreground">
-              {c.spots_taken} of {c.spots_cap} spots · {c.backers} {c.backers === 1 ? "backer" : "backers"}
+              {c.spots_taken} of {c.spots_cap} founding spots · {c.referral_buyers} referral {c.referral_buyers === 1 ? "buyer" : "buyers"}
             </span>
           </div>
         ) : (

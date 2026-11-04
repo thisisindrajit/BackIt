@@ -1006,8 +1006,8 @@ export interface components {
             spots_cap: number;
             /** Spots Taken */
             spots_taken: number;
-            /** Backers */
-            backers: number;
+            /** Referral Buyers */
+            referral_buyers: number;
             /** Published At */
             published_at: string | null;
         };
