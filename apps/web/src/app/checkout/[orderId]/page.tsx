@@ -9,11 +9,11 @@ export default async function CheckoutPage({ params, searchParams }: PageProps<"
   return (
     <div className="flex min-h-svh flex-col">
       <header className="border-b">
-        <div className="mx-auto flex h-14 w-full max-w-xl items-center px-4 sm:px-6">
+        <div className="mx-auto flex h-14 w-full max-w-4xl items-center px-4 sm:px-6">
           <Wordmark />
         </div>
       </header>
-      <main className="mx-auto flex w-full max-w-xl flex-col gap-6 px-4 py-10 sm:px-6">
+      <main className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-4 py-10 md:py-14 sm:px-6">
         <Checkout orderId={orderId} approved={query.approved === "1"} />
       </main>
     </div>

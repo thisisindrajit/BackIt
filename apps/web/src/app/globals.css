@@ -197,11 +197,29 @@
   0% {
     opacity: 1;
     transform: translate(0, 0) rotate(0deg);
+    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  32% {
+    transform: translate(calc(var(--dx) * 0.7), var(--peak)) rotate(calc(var(--r) * 0.4));
+    animation-timing-function: cubic-bezier(0.45, 0, 0.9, 0.6);
+  }
+  85% {
+    opacity: 1;
   }
   100% {
     opacity: 0;
-    transform: translate(var(--dx), var(--dy)) rotate(var(--r));
+    transform: translate(var(--dx), var(--fall)) rotate(var(--r));
   }
+}
+
+@keyframes flutter {
+  to {
+    transform: rotateX(360deg) rotateY(180deg);
+  }
+}
+
+.confetti-flutter {
+  animation: flutter 600ms linear infinite;
 }
 
 /* One page container so the header, sections and footer share the same edges. */
@@ -318,7 +336,8 @@
   .spin-slow,
   .float,
   .ticker,
-  .confetti-piece {
+  .confetti-piece,
+  .confetti-flutter {
     animation: none !important;
   }
   .confetti-piece {

@@ -474,6 +474,11 @@ class OrderOut(BaseModel):
     id: str
     campaign_id: str
     campaign_slug: str
+    product_name: str
+    product_url: str
+    builder_name: str
+    access_terms: str
+    referral_reward_cents: int
     kind: Literal["founding", "referral"]
     state: OrderState
     list_price_cents: int

@@ -1302,6 +1302,16 @@ export interface components {
             campaign_id: string;
             /** Campaign Slug */
             campaign_slug: string;
+            /** Product Name */
+            product_name: string;
+            /** Product Url */
+            product_url: string;
+            /** Builder Name */
+            builder_name: string;
+            /** Access Terms */
+            access_terms: string;
+            /** Referral Reward Cents */
+            referral_reward_cents: number;
             /**
              * Kind
              * @enum {string}

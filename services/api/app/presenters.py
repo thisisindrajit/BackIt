@@ -21,6 +21,7 @@ from app.models import (
     SellerConnection,
     WebhookDelivery,
 )
+from app.money import quote_referral
 from app.schemas import (
     BackingCampaign,
     BackingOut,
@@ -179,10 +180,18 @@ def order_out(db: Session, order: Order) -> OrderOut:
     product = db.get(Product, campaign.product_id)
     assert product is not None
     backing = db.get(Backing, order.backing_id) if order.backing_id else None
+    owner = db.get(Profile, product.owner_id)
+    reward = quote_referral(campaign.referral_list_price_cents, campaign.referral_discount_bps,
+                            campaign.commission_bps, campaign.platform_fee_bps).commission_cents
     return OrderOut(
         id=order.id,
         campaign_id=order.campaign_id,
         campaign_slug=campaign.slug,
+        product_name=product.name,
+        product_url=product.url,
+        builder_name=owner.display_name if owner else "",
+        access_terms=product.access_terms,
+        referral_reward_cents=reward,
         kind=order.kind,  # type: ignore[arg-type]
         state=order.state,  # type: ignore[arg-type]
         list_price_cents=order.list_price_cents,
