@@ -25,7 +25,7 @@ const timelessSans = localFont({
 export const metadata: Metadata = {
   title: { default: "BackIt", template: "%s · BackIt" },
   description:
-    "Turn your first fans into your best salespeople. Early fans buy at a founding price and earn a reward for every friend who buys.",
+    "Turn your product's first fans into your best salespeople. Early fans buy at a founding price and earn a reward for every friend who buys.",
 };
 
 export const viewport: Viewport = {

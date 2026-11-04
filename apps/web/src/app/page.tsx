@@ -142,7 +142,7 @@ export default function Home() {
       <SiteHeader />
       <main className="flex flex-col">
         <section className="page-shell flex flex-col items-center gap-8 pt-16 pb-14 text-center md:pt-24">
-          <HeroWords words={["Turn", "your", "first", "fans", "into", "your", "best"]} accent="salespeople." />
+          <HeroWords words={["Turn", "your", "product's", "first", "fans", "into", "your", "best"]} accent="salespeople." />
           <p className="rise max-w-xl text-lg text-pretty text-muted-foreground [animation-delay:600ms]">
             Let your earliest fans buy in at a founding price. They share their link and earn a reward for every friend who buys.
           </p>
