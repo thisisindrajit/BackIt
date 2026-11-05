@@ -19,6 +19,8 @@ export const auth = betterAuth({
     ssl: isLocalDb ? false : { rejectUnauthorized: true },
     options: "-c search_path=auth",
   }),
+  // Only for the seeded judge/demo accounts (scripts/create-demo-users.mjs); nobody can sign up this way.
+  emailAndPassword: { enabled: true, disableSignUp: true },
   socialProviders: {
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID as string,

@@ -5,6 +5,8 @@ import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { authClient } from "@/lib/auth-client";
 import { clearTokenCache } from "@/hooks/use-api";
@@ -48,6 +50,24 @@ export function AuthForm({ mode }: { mode: "sign-in" | "sign-up" }) {
     }
   }
 
+  async function signInWithDemo(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const form = new FormData(e.currentTarget);
+    setPending(true);
+    setError(null);
+    clearTokenCache();
+    const result = await authClient.signIn.email({
+      email: String(form.get("email") ?? "").trim(),
+      password: String(form.get("password") ?? ""),
+    });
+    if (result?.error) {
+      setPending(false);
+      setError("That demo email and password didn’t match. Check the testing instructions.");
+      return;
+    }
+    window.location.assign(next);
+  }
+
   const otherHref = `${isSignUp ? "/sign-in" : "/sign-up"}${params.get("next") ? `?next=${encodeURIComponent(next)}` : ""}`;
 
   return (
@@ -87,6 +107,29 @@ export function AuthForm({ mode }: { mode: "sign-in" | "sign-up" }) {
         <p className="text-center text-xs text-pretty text-muted-foreground">
           We use your Google name and email. Your name is shown on campaigns you run and back.
         </p>
+        {!isSignUp && (
+          <details className="group rounded-2xl border border-border/70 px-4 py-3 open:pb-4">
+            <summary className="cursor-pointer list-none text-center text-sm text-muted-foreground transition-colors hover:text-foreground [&::-webkit-details-marker]:hidden">
+              Judging BackIt? <span className="text-link underline underline-offset-4">Use a demo account</span>
+            </summary>
+            <form onSubmit={signInWithDemo} className="mt-4">
+              <FieldGroup className="gap-3">
+                <Field>
+                  <FieldLabel htmlFor="demo-email">Demo email</FieldLabel>
+                  <Input id="demo-email" name="email" type="email" autoComplete="username" required placeholder="builder@demo.backit.club" />
+                </Field>
+                <Field>
+                  <FieldLabel htmlFor="demo-password">Password</FieldLabel>
+                  <Input id="demo-password" name="password" type="password" autoComplete="current-password" required />
+                </Field>
+                <Button type="submit" size="lg" disabled={pending}>
+                  {pending ? <Spinner data-icon="inline-start" /> : null}
+                  Sign in to demo
+                </Button>
+              </FieldGroup>
+            </form>
+          </details>
+        )}
       </div>
     </div>
   );

@@ -4,6 +4,20 @@
 
 Backing is a purchase, not an investment. There is no equity and no revenue share.
 
+## Testing BackIt (for judges)
+
+Everything runs live on the PayPal **sandbox**, so no real money moves. The demo credentials (two BackIt accounts and a PayPal sandbox buyer) are in the hackathon submission. You can also sign in with your own Google account.
+
+1. **Back the product.** Open [backit.club/ledgerly](https://backit.club/ledgerly), choose **Claim a founding spot**, and sign in with the demo **backer** account (Sign in → *Use a demo account*).
+2. **Pay.** Use the PayPal button and log in with the sandbox buyer. Confetti means the payment was captured.
+3. **Unlock the product.** Copy the access code from the success screen, open [test-app.backit.club](https://test-app.backit.club) (Ledgerly, a fake app with a paywall), and redeem it to unlock Pro. BackIt sends the purchase to Ledgerly over a signed webhook.
+4. **Share.** On your backing in the dashboard, copy your referral link. Open it in a private window and buy with another account (your Google account or the builder account) to see the referral discount. The first backer earns a commission.
+5. **See the builder side.** Sign out, then sign in with the demo **builder** account. You'll see sales, the notification bell, campaign stats, the AI risk review and payout explanations, payouts, and refunds.
+
+Ledgerly has 500 founding spots, so there is plenty of room to test.
+
+To recreate the demo accounts on another database: `DEMO_BUILDER_PASSWORD=… DEMO_BACKER_PASSWORD=… node --env-file=.env.local scripts/create-demo-users.mjs` (run it from `apps/web`). Email/password sign-up is turned off in the app; only these seeded accounts can sign in that way.
+
 ## Repository
 
 | Path | What |
