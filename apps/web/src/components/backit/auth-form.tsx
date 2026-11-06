@@ -107,29 +107,27 @@ export function AuthForm({ mode }: { mode: "sign-in" | "sign-up" }) {
         <p className="text-center text-xs text-pretty text-muted-foreground">
           We use your Google name and email. Your name is shown on campaigns you run and back.
         </p>
-        {!isSignUp && (
-          <details className="group rounded-2xl border border-border/70 px-4 py-3 open:pb-4">
-            <summary className="cursor-pointer list-none text-center text-sm text-muted-foreground transition-colors hover:text-foreground [&::-webkit-details-marker]:hidden">
-              Judging BackIt? <span className="text-link underline underline-offset-4">Use a demo account</span>
-            </summary>
-            <form onSubmit={signInWithDemo} className="mt-4">
-              <FieldGroup className="gap-3">
-                <Field>
-                  <FieldLabel htmlFor="demo-email">Demo email</FieldLabel>
-                  <Input id="demo-email" name="email" type="email" autoComplete="username" required placeholder="builder@demo.backit.club" />
-                </Field>
-                <Field>
-                  <FieldLabel htmlFor="demo-password">Password</FieldLabel>
-                  <Input id="demo-password" name="password" type="password" autoComplete="current-password" required />
-                </Field>
-                <Button type="submit" size="lg" disabled={pending}>
-                  {pending ? <Spinner data-icon="inline-start" /> : null}
-                  Sign in to demo
-                </Button>
-              </FieldGroup>
-            </form>
-          </details>
-        )}
+        <details className="group rounded-2xl border border-border/70 px-4 py-3 open:pb-4">
+          <summary className="cursor-pointer list-none text-center text-sm text-muted-foreground transition-colors hover:text-foreground [&::-webkit-details-marker]:hidden">
+            Judging BackIt? <span className="text-link underline underline-offset-4">Use a demo account</span>
+          </summary>
+          <form onSubmit={signInWithDemo} className="mt-4">
+            <FieldGroup className="gap-3">
+              <Field>
+                <FieldLabel htmlFor="demo-email">Demo email</FieldLabel>
+                <Input id="demo-email" name="email" type="email" autoComplete="username" required placeholder="builder@demo.backit.club" />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="demo-password">Password</FieldLabel>
+                <Input id="demo-password" name="password" type="password" autoComplete="current-password" required />
+              </Field>
+              <Button type="submit" size="lg" disabled={pending}>
+                {pending ? <Spinner data-icon="inline-start" /> : null}
+                Sign in to demo
+              </Button>
+            </FieldGroup>
+          </form>
+        </details>
       </div>
     </div>
   );
