@@ -48,7 +48,8 @@ def draft_new_campaign(body: NewCampaignDraftIn, user: CurrentUserDep, db: DBDep
 @router.post("/offer-suggestion")
 def suggest_new_offer(body: NewOfferSuggestionIn, user: CurrentUserDep, db: DBDep) -> OfferSuggestion:
     """AI-suggested offer from unsaved product details."""
-    result = offer_service.suggest_offer(db, user, body.product, body.notes, body.list_price_cents)
+    result = offer_service.suggest_offer(db, user, body.product, body.notes, body.list_price_cents,
+                                          body.offer_type, body.offer_value)
     db.commit()  # keep the ai_runs record
     return result
 
@@ -116,7 +117,8 @@ def suggest_offer(
 ) -> OfferSuggestion:
     """AI-suggested founding and referral terms, validated and projected server-side."""
     product = owned_product(db, product_id, user)
-    result = offer_service.suggest_offer(db, user, product, body.notes, body.list_price_cents)
+    result = offer_service.suggest_offer(db, user, product, body.notes, body.list_price_cents,
+                                          body.offer_type, body.offer_value)
     db.commit()  # keep the ai_runs record
     return result
 

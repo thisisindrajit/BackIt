@@ -252,6 +252,8 @@ class CampaignDraftIn(StrictModel):
 class OfferSuggestionIn(StrictModel):
     notes: Annotated[str, Field(max_length=4000)] | None = None
     list_price_cents: PriceCents
+    offer_type: OfferType = "lifetime"
+    offer_value: OfferValue | None = None
 
 
 class OfferTerms(StrictModel):
@@ -272,6 +274,8 @@ class NewOfferSuggestionIn(StrictModel):
     product: ProductFacts
     notes: Annotated[str, Field(max_length=4000)] | None = None
     list_price_cents: PriceCents
+    offer_type: OfferType = "lifetime"
+    offer_value: OfferValue | None = None
 
 
 class OfferReasons(BaseModel):

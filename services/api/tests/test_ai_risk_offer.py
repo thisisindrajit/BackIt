@@ -105,6 +105,8 @@ def test_offer_suggestion_keeps_the_builders_list_price(client, auth) -> None:
     s = client.post(url, headers=h, json={"notes": "Pro is $12/month", "list_price_cents": 7900}).json()
     assert s["referral_list_price_cents"] == 7900 and s["founding_price_cents"] == 4900
     assert "list_price" not in s["reasons"]
+    coupon = client.post(url, headers=h, json={"list_price_cents": 7900, "offer_type": "discount", "offer_value": 40})
+    assert coupon.status_code == 200 and coupon.json()["referral_list_price_cents"] == 7900
     assert client.post(url, headers=h, json={"notes": "Pro is $79"}).status_code == 422
     r = client.post(url, headers=h, json={"list_price_cents": 100})
     assert r.status_code == 422 and r.json()["error"]["code"] == "list_price_too_low"

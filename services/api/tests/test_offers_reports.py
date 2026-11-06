@@ -27,7 +27,7 @@ def test_offer_types_validate_and_label(client, auth) -> None:
         "product_id": pid, "slug": "coupons", **base, "offer_type": "discount", "offer_value": 40})
     assert r.status_code == 201, r.text
     cmp = r.json()
-    assert cmp["offer"] == {"type": "discount", "value": 40, "label": "40% off coupon"}
+    assert cmp["offer"] == {"type": "discount", "value": 40, "label": "40% off for life"}
 
     r = client.patch(f"/v1/campaigns/{cmp['id']}", headers=h, json={"offer_type": "voucher", "offer_value": 5000})
     assert r.json()["offer"]["label"] == "$50 voucher"

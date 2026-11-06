@@ -17,11 +17,9 @@ import { PageHeader } from "@/components/backit/page-header";
 import {
   fromBps,
   fromCents,
-  MoneyField,
   OfferAdvisor,
-  OfferPicker,
-  PercentField,
-  ReferralExample,
+  OfferFields,
+  offerValue,
   STORY_MAX,
   toBody,
   type Values,
@@ -30,7 +28,7 @@ import { SecretReveal } from "@/components/builder/secret-reveal";
 import { authedApi, useInvalidate } from "@/hooks/use-api";
 import { useAction } from "@/hooks/use-action";
 import { errorMessage } from "@/lib/api/client";
-import { dollarsToCents, percentToBps } from "@/lib/format";
+import { dollarsToCents } from "@/lib/format";
 import type { CampaignDraft, OfferSuggestion, ProductCreated } from "@/lib/api/types";
 
 type Product = { name: string; url: string; description: string; access_terms: string; refund_terms: string; webhook_url: string };
@@ -197,14 +195,19 @@ export default function NewCampaignPage() {
           </FieldGroup>
         </FormSection>
 
-        <FormSection title="Founding offer" description="Founding backers pay once, get a permanent numbered badge, and a referral link that earns them a commission.">
+        <FormSection title="Founding offer" description="One payment buys one reward. Pick the reward, then set what founding backers and their friends pay.">
           {canAskAi ? (
             <OfferAdvisor
               listCents={dollarsToCents(values.referral_list_price)}
               request={() =>
                 authedApi<OfferSuggestion>("/products/offer-suggestion", {
                   method: "POST", readOnly: true,
-                  body: { product: facts(), list_price_cents: dollarsToCents(values.referral_list_price) },
+                  body: {
+                    product: facts(),
+                    list_price_cents: dollarsToCents(values.referral_list_price),
+                    offer_type: values.offer_type,
+                    offer_value: offerValue(values),
+                  },
                 })
               }
               onApply={(o) =>
@@ -219,29 +222,10 @@ export default function NewCampaignPage() {
             />
           ) : (
             <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-              Add your product name and what it does, and the offer advisor can suggest prices, spots and commission.
+              Add your product name and what it does, and the offer advisor can suggest the numbers.
             </p>
           )}
-          <OfferPicker type={values.offer_type} value={values.offer_value} onChange={(o) => setValues((v) => ({ ...v, ...o }))} />
-          <div className="grid gap-3 sm:grid-cols-2">
-            <MoneyField id="founding_price" label="Founding price" value={values.founding_price} onChange={setV("founding_price")} />
-            <Field>
-              <FieldLabel htmlFor="founding_spots_cap">Spots</FieldLabel>
-              <Input id="founding_spots_cap" type="number" min={1} max={10000} value={values.founding_spots_cap} onChange={setV("founding_spots_cap")} required />
-            </Field>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-3">
-            <MoneyField id="referral_list_price" label="List price" value={values.referral_list_price} onChange={setV("referral_list_price")} />
-            <PercentField id="referral_discount" label="Buyer discount" value={values.referral_discount} onChange={setV("referral_discount")} />
-            <PercentField id="commission" label="Backer commission" value={values.commission} onChange={setV("commission")} />
-          </div>
-          <FieldDescription>List price is your regular one-time price for what backers get. Referred friends get their discount off it.</FieldDescription>
-          <ReferralExample
-            listCents={dollarsToCents(values.referral_list_price)}
-            discountBps={percentToBps(values.referral_discount)}
-            commissionBps={percentToBps(values.commission)}
-            feeBps={FEE_BPS}
-          />
+          <OfferFields values={values} set={setV} onOfferChange={(o) => setValues((v) => ({ ...v, ...o }))} feeBps={FEE_BPS} />
         </FormSection>
 
         <FormSection

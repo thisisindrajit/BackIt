@@ -15,17 +15,15 @@ import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { authedApi, useApi } from "@/hooks/use-api";
 import { ApiError, errorMessage } from "@/lib/api/client";
-import { dollarsToCents, percentToBps, shortDate } from "@/lib/format";
+import { dollarsToCents, shortDate } from "@/lib/format";
 import type { Campaign, CampaignDraft, OfferSuggestion, Product, Readiness } from "@/lib/api/types";
 import { useAction } from "@/hooks/use-action";
 import {
   fromBps,
   fromCents,
-  MoneyField,
   OfferAdvisor,
-  OfferPicker,
-  PercentField,
-  ReferralExample,
+  OfferFields,
+  offerValue,
   STORY_MAX,
   toBody,
   toValues,
@@ -193,6 +191,8 @@ function CampaignForm({ product, campaign, draft, onSaved }: { product: Product;
                     body: {
                       notes: [product.description, values.summary].filter(Boolean).join("\n\n").slice(0, 2000) || null,
                       list_price_cents: dollarsToCents(values.referral_list_price),
+                      offer_type: values.offer_type,
+                      offer_value: offerValue(values),
                     },
                   })
                 }
@@ -209,36 +209,8 @@ function CampaignForm({ product, campaign, draft, onSaved }: { product: Product;
             )}
             <FieldSet>
               <FieldLegend>Founding offer</FieldLegend>
-              <FieldDescription>Founding backers pay once, get a permanent numbered badge, and a referral link.</FieldDescription>
-              <OfferPicker
-                type={values.offer_type}
-                value={values.offer_value}
-                disabled={locked}
-                onChange={(o) => setValues((v) => ({ ...v, ...o }))}
-              />
-              <div className="grid gap-3 sm:grid-cols-2">
-                <MoneyField id="founding_price" label="Price" value={values.founding_price} onChange={set("founding_price")} disabled={locked} />
-                <Field>
-                  <FieldLabel htmlFor="founding_spots_cap">Spots</FieldLabel>
-                  <Input id="founding_spots_cap" type="number" min={1} max={10000} value={values.founding_spots_cap} onChange={set("founding_spots_cap")} required disabled={locked} />
-                </Field>
-              </div>
-            </FieldSet>
-            <FieldSet>
-              <FieldLegend>Referral offer</FieldLegend>
-              <FieldDescription>What people pay through a backer’s link, and what that backer earns.</FieldDescription>
-              <div className="grid gap-3 sm:grid-cols-3">
-                <MoneyField id="referral_list_price" label="List price" value={values.referral_list_price} onChange={set("referral_list_price")} disabled={locked} />
-                <PercentField id="referral_discount" label="Buyer discount" value={values.referral_discount} onChange={set("referral_discount")} disabled={locked} />
-                <PercentField id="commission" label="Backer commission" value={values.commission} onChange={set("commission")} disabled={locked} />
-              </div>
-              <FieldDescription>Commission is paid on what the buyer actually pays. BackIt’s {feeBps / 100}% fee comes out of each sale.</FieldDescription>
-              <ReferralExample
-                listCents={dollarsToCents(values.referral_list_price)}
-                discountBps={percentToBps(values.referral_discount)}
-                commissionBps={percentToBps(values.commission)}
-                feeBps={feeBps}
-              />
+              <FieldDescription>One payment buys one reward. Pick the reward, then set what founding backers and their friends pay.</FieldDescription>
+              <OfferFields values={values} set={set} onOfferChange={(o) => setValues((v) => ({ ...v, ...o }))} feeBps={feeBps} disabled={locked} />
             </FieldSet>
             {draft?.disclosure ? <p className="text-sm text-muted-foreground">{draft.disclosure}</p> : null}
             <Button type="submit" className="self-start" disabled={pending}>

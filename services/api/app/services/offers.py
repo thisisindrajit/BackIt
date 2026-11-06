@@ -13,6 +13,7 @@ from app.config import get_settings
 from app.errors import AppError
 from app.models import Product, Profile
 from app.money import dollar_amounts_cents, format_usd, offer_problems, quote_founding, quote_referral
+from app.offer_types import offer_label
 from app.presenters import latest_verification
 from app.providers import ai
 from app.schemas import OfferProjection, OfferReasons, OfferSuggestion, ProductFacts
@@ -65,9 +66,24 @@ def projection(offer: dict[str, int], fee_bps: int) -> OfferProjection:
     )
 
 
+def _reward(offer_type: str, value: int | None) -> str:
+    if offer_type == "discount":
+        return f"{value}% off the product for life" if value else "a discount on the product for life"
+    if offer_type == "voucher":
+        return f"{format_usd(value)} of credit to spend in the product" if value else "credit to spend in the product"
+    if offer_type == "custom":
+        return "the reward described in access_details"
+    if offer_type == "access_period":
+        return offer_label(offer_type, value) if value else "access for a set number of months"
+    return "lifetime access"
+
+
 def suggest_offer(db: Session, user: Profile, product: Product | ProductFacts, notes: str | None,
-                  list_price: int) -> OfferSuggestion:
-    """`list_price` is the builder's own regular price; the advisor builds around it and never changes it."""
+                  list_price: int, offer_type: str = "lifetime", offer_value: int | None = None) -> OfferSuggestion:
+    """`list_price` is the builder's own regular price; the advisor builds around it and never changes it.
+
+    The offer type is what every buyer gets for their payment, so the reasons talk about that reward.
+    """
     fee_bps = get_settings().platform_fee_bps
     saved = isinstance(product, Product)
     existing = campaign_for_product(db, product.id) if saved else None
@@ -91,7 +107,7 @@ def suggest_offer(db: Session, user: Profile, product: Product | ProductFacts, n
         if not valid({**offer, "referral_list_price_cents": list_price}):
             offer |= {"referral_discount_bps": 1000, "commission_bps": 1000}
         if founding >= list_price or not valid({**offer, "referral_list_price_cents": list_price}):
-            raise AppError(422, "list_price_too_low", "Set a list price above $1 to get a suggestion.")
+            raise AppError(422, "list_price_too_low", "Set a regular price above $1 to get a suggestion.")
         return _Idea(
             **offer,
             founding_price_reason="About 40% off the regular price: a clear reward for backing early.",
@@ -109,6 +125,8 @@ def suggest_offer(db: Session, user: Profile, product: Product | ProductFacts, n
         p = projection(offer, fee_bps)
         allowed = {*offer.values(), *p.model_dump().values(), list_price, *stated,
                    list_price - p.friend_pays_cents}
+        if offer_type == "voucher" and offer_value:
+            allowed.add(offer_value)
         text = " ".join((o.founding_price_reason, o.spots_reason, o.discount_reason, o.commission_reason))
         allowed |= {round(v / 100) * 100 for v in allowed}  # "$119" for $119.20 is fine
         for cents in dollar_amounts_cents(text):
@@ -118,7 +136,8 @@ def suggest_offer(db: Session, user: Profile, product: Product | ProductFacts, n
     facts = {
         "product": product.name,
         "description": product.description,
-        "what_buyers_get": product.access_terms,
+        "reward": _reward(offer_type, offer_value),
+        "access_details": product.access_terms,
         "builder_notes": (notes or "")[:3000],
         "list_price": format_usd(list_price),
         "average_monthly_revenue": format_usd(mrr) if mrr is not None else "unknown",
@@ -130,13 +149,16 @@ def suggest_offer(db: Session, user: Profile, product: Product | ProductFacts, n
     out, source, _ = ai.generate(
         db,
         purpose="offer_advice",
-        prompt_version="offer_advice.v3",
+        prompt_version="offer_advice.v4",
         actor_id=user.id,
         system=(
             "You are a pricing advisor for indie software builders running a founding-backer campaign on BackIt. "
-            "Founding backers pay once for lifetime access and a numbered badge; each gets a referral link. "
-            "Friends buying through it pay the list price minus a discount, and the backer earns a commission "
-            "on what the friend pays. Suggest terms that reward early backers, give friends a real reason to buy, "
+            "Every buyer pays once for the reward in `reward` (for example lifetime access, months of access, "
+            "a discount locked in for life, or store credit); describe that reward, never assume lifetime access. "
+            "Founding backers pay the founding price and get a numbered badge; each gets a referral link. "
+            "Friends buying the same reward through it pay the list price minus a discount, "
+            "and the backer earns a commission on what the friend pays. "
+            "Suggest terms that reward early backers, give friends a real reason to buy, "
             "make sharing worthwhile, and still leave the builder most of each sale. "
             "The builder set the list price: the full one-time price a referred friend pays before their discount. "
             "It is fixed; build the offer around it and never suggest a different one. "

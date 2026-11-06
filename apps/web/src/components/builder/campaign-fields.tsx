@@ -5,7 +5,8 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
+import { Field, FieldDescription, FieldLabel, FieldLegend, FieldSet } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import { InputGroup, InputGroupAddon, InputGroupInput, InputGroupText } from "@/components/ui/input-group";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
@@ -15,16 +16,16 @@ import type { Campaign, Offer, OfferSuggestion, OfferType } from "@/lib/api/type
 
 export const OFFER_TYPES: { value: OfferType; label: string; hint: string }[] = [
   { value: "lifetime", label: "Lifetime deal", hint: "Pay once, use it forever." },
-  { value: "access_period", label: "Access for a set time", hint: "Like 12 months of the paid plan." },
-  { value: "discount", label: "Discount coupon", hint: "A percentage off your product." },
-  { value: "voucher", label: "Voucher or credit", hint: "A fixed amount to spend in your product." },
+  { value: "access_period", label: "Access for a set time", hint: "Pay once for a set number of months." },
+  { value: "discount", label: "Discount coupon", hint: "Pay once to lock in a discount for life." },
+  { value: "voucher", label: "Voucher or credit", hint: "Pay once for credit to spend in your product." },
   { value: "custom", label: "Something else", hint: "Describe it in the Access field." },
 ];
 
 const OFFER_VALUE: Partial<Record<OfferType, { label: string; unit: string; prefix?: boolean; placeholder: string }>> = {
   access_period: { label: "Months of access", unit: "months", placeholder: "12" },
-  discount: { label: "Discount", unit: "%", placeholder: "40" },
-  voucher: { label: "Voucher amount", unit: "$", prefix: true, placeholder: "50" },
+  discount: { label: "Discount for life", unit: "%", placeholder: "40" },
+  voucher: { label: "Credit amount", unit: "$", prefix: true, placeholder: "75" },
 };
 
 export type Values = {
@@ -76,8 +77,101 @@ export function toBody(v: Values) {
     referral_discount_bps: percentToBps(v.referral_discount),
     commission_bps: percentToBps(v.commission),
     offer_type: v.offer_type,
-    offer_value: !OFFER_VALUE[v.offer_type] ? null : v.offer_type === "voucher" ? dollarsToCents(v.offer_value) : Math.round(Number(v.offer_value)),
+    offer_value: offerValue(v),
   };
+}
+
+export function offerValue(v: Pick<Values, "offer_type" | "offer_value">): number | null {
+  if (!OFFER_VALUE[v.offer_type] || !v.offer_value.trim()) return null;
+  return v.offer_type === "voucher" ? dollarsToCents(v.offer_value) : Math.round(Number(v.offer_value));
+}
+
+function months(n: number) {
+  if (n % 12 === 0) return n === 12 ? "1 year" : `${n / 12} years`;
+  return n === 1 ? "1 month" : `${n} months`;
+}
+
+/** What one payment buys, in a phrase that completes "pay once for ___". */
+export function rewardPhrase(type: OfferType, raw: string): string {
+  const n = Number(raw);
+  const has = raw.trim() !== "" && Number.isFinite(n) && n > 0;
+  switch (type) {
+    case "access_period":
+      return has ? `${months(Math.round(n))} of access` : "a set number of months of access";
+    case "discount":
+      return has ? `${+n.toFixed(2)}% off for life` : "a discount for life";
+    case "voucher":
+      return has ? `${money(dollarsToCents(raw))} of credit` : "credit to spend in your product";
+    case "custom":
+      return "what you describe in Access";
+    default:
+      return "lifetime access";
+  }
+}
+
+const PRICE_HINT: Record<OfferType, string> = {
+  lifetime: "Paid once for lifetime access.",
+  access_period: "Paid once for the whole period.",
+  discount: "Paid once to lock in the discount. A small amount works best.",
+  voucher: "Paid once for the credit. Make the credit worth more than this.",
+  custom: "Paid once for what you describe in Access.",
+};
+
+type Setter = (field: keyof Values) => React.ChangeEventHandler<HTMLInputElement | HTMLTextAreaElement>;
+
+/** The whole offer: what one payment buys, what founding backers pay, and how referrals work. */
+export function OfferFields({
+  values,
+  set,
+  onOfferChange,
+  feeBps,
+  disabled,
+}: {
+  values: Values;
+  set: Setter;
+  onOfferChange: (next: { offer_type: OfferType; offer_value: string }) => void;
+  feeBps: number;
+  disabled?: boolean;
+}) {
+  const reward = rewardPhrase(values.offer_type, values.offer_value);
+  const spots = Number(values.founding_spots_cap);
+  return (
+    <>
+      <OfferPicker type={values.offer_type} value={values.offer_value} disabled={disabled} onChange={onOfferChange} />
+      <FieldSet>
+        <FieldLegend variant="label">Founding backers</FieldLegend>
+        <FieldDescription>
+          {Number.isInteger(spots) && spots > 0 ? `The first ${spots.toLocaleString()} backers` : "Founding backers"} pay once for {reward}, plus a numbered badge and a referral
+          link.
+        </FieldDescription>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <MoneyField id="founding_price" label="Price" value={values.founding_price} onChange={set("founding_price")} disabled={disabled} hint={PRICE_HINT[values.offer_type]} />
+          <Field>
+            <FieldLabel htmlFor="founding_spots_cap">Spots</FieldLabel>
+            <Input id="founding_spots_cap" type="number" min={1} max={10000} value={values.founding_spots_cap} onChange={set("founding_spots_cap")} required disabled={disabled} />
+          </Field>
+        </div>
+      </FieldSet>
+      <FieldSet>
+        <FieldLegend variant="label">Friends they refer</FieldLegend>
+        <FieldDescription>Friends get the same thing through a backer’s link. They pay your regular price minus their discount, and the backer earns a share.</FieldDescription>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <MoneyField id="referral_list_price" label="Regular price" value={values.referral_list_price} onChange={set("referral_list_price")} disabled={disabled} />
+          <PercentField id="referral_discount" label="Friend’s discount" value={values.referral_discount} onChange={set("referral_discount")} disabled={disabled} />
+          <PercentField id="commission" label="Backer’s share" value={values.commission} onChange={set("commission")} disabled={disabled} />
+        </div>
+      </FieldSet>
+      <OfferSummary
+        reward={reward}
+        foundingCents={dollarsToCents(values.founding_price)}
+        spots={spots}
+        listCents={dollarsToCents(values.referral_list_price)}
+        discountBps={percentToBps(values.referral_discount)}
+        commissionBps={percentToBps(values.commission)}
+        feeBps={feeBps}
+      />
+    </>
+  );
 }
 
 export function OfferPicker({
@@ -167,8 +261,8 @@ export function OfferAdvisor({ listCents, request, onApply }: { listCents: numbe
           <span className="text-sm font-medium">Not sure what to charge?</span>
           <span className="text-sm text-muted-foreground">
             {hasListPrice
-              ? "The offer advisor builds a founding price, spots, discount and commission around your list price, using your product details and verified revenue."
-              : "Enter your list price below, and the offer advisor suggests a founding price, spots, discount and commission around it."}
+              ? "The offer advisor suggests a price, spots, friend’s discount and backer’s share around your regular price."
+              : "Enter your regular price below, and the offer advisor suggests the rest around it."}
           </span>
         </div>
         <Button type="button" variant="outline" className="shrink-0" onClick={suggest} disabled={!hasListPrice || pending === "suggest"}>
@@ -181,10 +275,10 @@ export function OfferAdvisor({ listCents, request, onApply }: { listCents: numbe
 
   const p = idea.projection;
   const rows: [string, string, string][] = [
-    ["Founding price", money(idea.founding_price_cents), idea.reasons.founding_price],
+    ["Price", money(idea.founding_price_cents), idea.reasons.founding_price],
     ["Spots", String(idea.founding_spots_cap), idea.reasons.spots],
-    ["Buyer discount", pct(idea.referral_discount_bps), idea.reasons.discount],
-    ["Backer commission", pct(idea.commission_bps), idea.reasons.commission],
+    ["Friend’s discount", pct(idea.referral_discount_bps), idea.reasons.discount],
+    ["Backer’s share", pct(idea.commission_bps), idea.reasons.commission],
   ];
 
   return (
@@ -193,7 +287,7 @@ export function OfferAdvisor({ listCents, request, onApply }: { listCents: numbe
         <SparklesIcon className="size-4" />
         Suggested offer
         <Badge variant="outline">{idea.source === "ai" ? "AI" : "Template"}</Badge>
-        <span className="font-normal text-muted-foreground">for your {money(idea.referral_list_price_cents)} list price</span>
+        <span className="font-normal text-muted-foreground">for your {money(idea.referral_list_price_cents)} regular price</span>
       </div>
       <dl className="flex flex-col divide-y divide-border rounded-md border bg-background text-sm">
         {rows.map(([label, value, reason]) => (
@@ -235,32 +329,50 @@ const applyBps = (cents: number, bps: number) => Math.round((cents * bps) / 1000
 
 export const pct = (bps: number) => `${+(bps / 100).toFixed(2)}%`;
 
-export function ReferralExample({ listCents, discountBps, commissionBps, feeBps }: { listCents: number; discountBps: number; commissionBps: number; feeBps: number }) {
-  if (![listCents, discountBps, commissionBps].every(Number.isFinite) || listCents <= 0) return null;
+function OfferSummary({
+  reward,
+  foundingCents,
+  spots,
+  listCents,
+  discountBps,
+  commissionBps,
+  feeBps,
+}: {
+  reward: string;
+  foundingCents: number;
+  spots: number;
+  listCents: number;
+  discountBps: number;
+  commissionBps: number;
+  feeBps: number;
+}) {
+  const founding = Number.isFinite(foundingCents) && foundingCents > 0;
+  const referral = [listCents, discountBps, commissionBps].every(Number.isFinite) && listCents > 0;
+  if (!founding && !referral) return null;
   const paid = listCents - applyBps(listCents, discountBps);
-  const reward = applyBps(paid, commissionBps);
-  const fee = applyBps(paid, feeBps);
-  const kept = paid - reward - fee;
+  const share = applyBps(paid, commissionBps);
+  const kept = paid - share - applyBps(paid, feeBps);
   return (
-    <div className="flex flex-col gap-1.5 rounded-2xl bg-accent/70 px-4 py-3 text-sm text-accent-foreground">
-      <p className="font-medium">Example</p>
-      <ul className="tabular flex flex-wrap gap-1.5 text-xs">
-        <li className="rounded-full bg-background/70 px-2.5 py-1">List price {money(listCents)}</li>
-        <li className="rounded-full bg-background/70 px-2.5 py-1">Buyer discount {pct(discountBps)}</li>
-        <li className="rounded-full bg-background/70 px-2.5 py-1">Backer commission {pct(commissionBps)}</li>
-        <li className="rounded-full bg-background/70 px-2.5 py-1">BackIt fee {pct(feeBps)}</li>
-      </ul>
-      <p className="text-pretty">
-        A friend uses a backer’s link and pays <span className="tabular font-medium">{money(paid)}</span> instead of{" "}
-        <span className="tabular">{money(listCents)}</span>. The backer earns <span className="tabular font-medium">{money(reward)}</span>{" "}
-        <span className="tabular">({pct(commissionBps)} of {money(paid)})</span>, BackIt takes <span className="tabular">{money(fee)}</span>{" "}
-        <span className="tabular">({pct(feeBps)} of {money(paid)})</span>, and you keep <span className="tabular font-medium">{money(kept)}</span> before PayPal fees.
-      </p>
+    <div className="flex flex-col gap-1.5 rounded-2xl bg-accent/70 px-4 py-3 text-sm text-pretty text-accent-foreground">
+      <p className="font-medium">In short</p>
+      {founding ? (
+        <p>
+          Founding backers pay <span className="tabular font-medium">{money(foundingCents)}</span> once for {reward}
+          {Number.isInteger(spots) && spots > 0 ? <>, while <span className="tabular">{spots.toLocaleString()}</span> spots last</> : null}.
+        </p>
+      ) : null}
+      {referral ? (
+        <p>
+          A friend they refer pays <span className="tabular font-medium">{money(paid)}</span> for the same thing. Their backer earns{" "}
+          <span className="tabular font-medium">{money(share)}</span>, and you keep <span className="tabular font-medium">{money(kept)}</span> after BackIt’s{" "}
+          {pct(feeBps)} fee, before PayPal fees.
+        </p>
+      ) : null}
     </div>
   );
 }
 
-export function MoneyField({ id, label, ...props }: { id: string; label: string; value: string; onChange: React.ChangeEventHandler<HTMLInputElement>; disabled?: boolean }) {
+export function MoneyField({ id, label, hint, ...props }: { id: string; label: string; hint?: string; value: string; onChange: React.ChangeEventHandler<HTMLInputElement>; disabled?: boolean }) {
   return (
     <Field>
       <FieldLabel htmlFor={id}>{label}</FieldLabel>
@@ -270,6 +382,7 @@ export function MoneyField({ id, label, ...props }: { id: string; label: string;
         </InputGroupAddon>
         <InputGroupInput id={id} inputMode="decimal" required {...props} />
       </InputGroup>
+      {hint ? <FieldDescription>{hint}</FieldDescription> : null}
     </Field>
   );
 }

@@ -1404,6 +1404,14 @@ export interface components {
             notes?: string | null;
             /** List Price Cents */
             list_price_cents: number;
+            /**
+             * Offer Type
+             * @default lifetime
+             * @enum {string}
+             */
+            offer_type: "lifetime" | "access_period" | "discount" | "voucher" | "custom";
+            /** Offer Value */
+            offer_value?: number | null;
         };
         /** NotificationList */
         NotificationList: {
@@ -1503,6 +1511,14 @@ export interface components {
             notes?: string | null;
             /** List Price Cents */
             list_price_cents: number;
+            /**
+             * Offer Type
+             * @default lifetime
+             * @enum {string}
+             */
+            offer_type: "lifetime" | "access_period" | "discount" | "voucher" | "custom";
+            /** Offer Value */
+            offer_value?: number | null;
         };
         /** OfferTerms */
         OfferTerms: {

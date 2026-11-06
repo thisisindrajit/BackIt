@@ -45,7 +45,7 @@ def offer_label(offer_type: str, value: int | None) -> str:
     if offer_type == "access_period" and value:
         return f"{_months(value)} of access"
     if offer_type == "discount" and value:
-        return f"{value}% off coupon"
+        return f"{value}% off for life"
     if offer_type == "voucher" and value:
         return f"${value / 100:,.2f}".replace(".00", "") + " voucher"
     if offer_type == "custom":
