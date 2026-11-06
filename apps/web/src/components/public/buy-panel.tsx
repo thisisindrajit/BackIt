@@ -60,14 +60,18 @@ export function BuyPanel({ campaign: c, referralCode, signedIn }: { campaign: Pu
           <em className="text-primary-deep">{c.referrer?.display_name}</em> sent you
         </CardTitle>
         <CardDescription>
-          {percent(c.referral.discount_bps)} off {c.product.name}. {c.referrer?.display_name} earns {money(c.referral.commission_cents)} if you buy.
+          {c.referral.months} {c.referral.months === 1 ? "month" : "months"} of {c.product.name} at {percent(c.referral.discount_bps)} off, paid once.{" "}
+          {c.referrer?.display_name} earns {money(c.referral.commission_cents)} if you buy.
         </CardDescription>
       </CardHeader>
-      <CardContent>
-        <p className="flex items-baseline gap-2">
+      <CardContent className="flex flex-col gap-1">
+        <p className="flex flex-wrap items-baseline gap-2">
           <span className="tabular font-heading text-5xl">{money(c.referral.price_cents)}</span>
           <span className="text-sm text-muted-foreground">once</span>
-          <span className="tabular text-muted-foreground line-through">{money(c.referral.list_price_cents)}/month</span>
+          <span className="tabular text-muted-foreground line-through">{money(c.referral.list_price_cents)}</span>
+        </p>
+        <p className="tabular text-sm text-muted-foreground">
+          {c.referral.months} × {money(c.referral.monthly_price_cents)}/month
         </p>
       </CardContent>
       <CardFooter>

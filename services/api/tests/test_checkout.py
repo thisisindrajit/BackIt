@@ -100,6 +100,8 @@ def test_referral_attribution_and_pricing(client, campaign, buy) -> None:
     assert (bob["list_price_cents"], bob["discount_cents"], bob["amount_cents"],
             bob["platform_fee_cents"], bob["commission_cents"]) == (10000, 2000, 8000, 640, 2000)
     assert bob["backing"]["badge_number"] is None
+    assert bob["referral_months"] == 1 and bob["offer"]["type"] == "access_period" and bob["offer"]["value"] == 1
+    assert alice["referral_months"] is None and alice["offer"]["type"] == "lifetime"
     assert bob["backing"]["referral_code"] != code
 
     backings = client.get("/v1/me/backings", headers=campaign["headers"] | {}).json()

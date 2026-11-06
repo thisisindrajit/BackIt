@@ -1081,6 +1081,11 @@ export interface components {
             founding_spots_cap: number;
             /** Referral List Price Cents */
             referral_list_price_cents: number;
+            /**
+             * Referral Months
+             * @default 12
+             */
+            referral_months: number;
             /** Referral Discount Bps */
             referral_discount_bps: number;
             /** Commission Bps */
@@ -1110,6 +1115,8 @@ export interface components {
             founding_spots_cap: number;
             /** Referral List Price Cents */
             referral_list_price_cents: number;
+            /** Referral Months */
+            referral_months: number;
             /** Referral Discount Bps */
             referral_discount_bps: number;
             /** Commission Bps */
@@ -1147,6 +1154,11 @@ export interface components {
             founding_spots_cap: number;
             /** Referral List Price Cents */
             referral_list_price_cents: number;
+            /**
+             * Referral Months
+             * @default 12
+             */
+            referral_months: number;
             /** Referral Discount Bps */
             referral_discount_bps: number;
             /** Commission Bps */
@@ -1189,6 +1201,8 @@ export interface components {
             founding_spots_taken: number;
             /** Referral List Price Cents */
             referral_list_price_cents: number;
+            /** Referral Months */
+            referral_months: number;
             /** Referral Discount Bps */
             referral_discount_bps: number;
             /** Commission Bps */
@@ -1243,6 +1257,8 @@ export interface components {
             founding_spots_cap?: number | null;
             /** Referral List Price Cents */
             referral_list_price_cents?: number | null;
+            /** Referral Months */
+            referral_months?: number | null;
             /** Referral Discount Bps */
             referral_discount_bps?: number | null;
             /** Commission Bps */
@@ -1405,6 +1421,11 @@ export interface components {
             /** List Price Cents */
             list_price_cents: number;
             /**
+             * Referral Months
+             * @default 12
+             */
+            referral_months: number;
+            /**
              * Offer Type
              * @default lifetime
              * @enum {string}
@@ -1491,6 +1512,8 @@ export interface components {
             founding_spots_cap: number;
             /** Referral List Price Cents */
             referral_list_price_cents: number;
+            /** Referral Months */
+            referral_months: number;
             /** Referral Discount Bps */
             referral_discount_bps: number;
             /** Commission Bps */
@@ -1512,6 +1535,11 @@ export interface components {
             /** List Price Cents */
             list_price_cents: number;
             /**
+             * Referral Months
+             * @default 12
+             */
+            referral_months: number;
+            /**
              * Offer Type
              * @default lifetime
              * @enum {string}
@@ -1528,6 +1556,11 @@ export interface components {
             founding_spots_cap: number;
             /** Referral List Price Cents */
             referral_list_price_cents: number;
+            /**
+             * Referral Months
+             * @default 12
+             */
+            referral_months: number;
             /** Referral Discount Bps */
             referral_discount_bps: number;
             /** Commission Bps */
@@ -1605,6 +1638,8 @@ export interface components {
              * @enum {string}
              */
             state: "created" | "completed" | "cancelled" | "failed" | "refunded" | "pending_provider";
+            /** Referral Months */
+            referral_months: number | null;
             /** List Price Cents */
             list_price_cents: number;
             /** Discount Cents */
@@ -1979,6 +2014,10 @@ export interface components {
         };
         /** PublicReferral */
         PublicReferral: {
+            /** Monthly Price Cents */
+            monthly_price_cents: number;
+            /** Months */
+            months: number;
             /** List Price Cents */
             list_price_cents: number;
             /** Discount Bps */

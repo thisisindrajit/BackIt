@@ -51,7 +51,8 @@ def generate_share_drafts(db: Session, user: Profile, backing: Backing, campaign
             texts = [
                 f"Subject: Thought you'd like {product.name}\n\nHi,\n\nI've been backing "
                 f"{product.name}. {campaign.summary}\n\nYou get {discount} "
-                f"(list price {format_usd(campaign.referral_list_price_cents)}) with my link.",
+                f"on {campaign.referral_months} months of the "
+                f"{format_usd(campaign.referral_list_price_cents)}/month plan with my link.",
             ]
         return _Drafts(drafts=[t[:budget] for t in texts])
 

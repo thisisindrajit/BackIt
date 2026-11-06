@@ -42,7 +42,7 @@ KEY = Ed25519PrivateKey.generate()
 OFFER = {
     "founding_price_cents": 6000,
     "founding_spots_cap": 50,
-    "referral_list_price_cents": 10000,
+    "referral_list_price_cents": 1200,
     "referral_discount_bps": 2000,
     "commission_bps": 2500,
 }

@@ -193,6 +193,7 @@ function CampaignForm({ product, campaign, draft, onSaved }: { product: Product;
                       list_price_cents: dollarsToCents(values.referral_list_price),
                       offer_type: values.offer_type,
                       offer_value: offerValue(values),
+                      referral_months: Number(values.referral_months) || 12,
                     },
                   })
                 }
@@ -201,6 +202,7 @@ function CampaignForm({ product, campaign, draft, onSaved }: { product: Product;
                     ...v,
                     founding_price: fromCents(o.founding_price_cents),
                     founding_spots_cap: String(o.founding_spots_cap),
+                    referral_months: String(o.referral_months),
                     referral_discount: fromBps(o.referral_discount_bps),
                     commission: fromBps(o.commission_bps),
                   }))

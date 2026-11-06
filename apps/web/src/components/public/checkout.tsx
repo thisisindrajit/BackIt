@@ -152,7 +152,14 @@ export function Checkout({ orderId, approved = false }: { orderId: string; appro
         </CardHeader>
         <CardContent className="flex flex-col gap-5">
           <dl className="grid grid-cols-[1fr_auto] gap-y-2.5 text-sm">
-            <dt className="text-muted-foreground">{order.product_name}</dt>
+            <dt className="text-muted-foreground">
+              {order.product_name}
+              {order.referral_months ? (
+                <span className="tabular block text-xs">
+                  {order.referral_months} × {money(Math.round(order.list_price_cents / order.referral_months))}/month
+                </span>
+              ) : null}
+            </dt>
             <dd className="tabular text-right">{money(order.list_price_cents)}</dd>
             {order.discount_cents ? (
               <>

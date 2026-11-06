@@ -9,6 +9,8 @@ MIN_PRICE_CENTS = 100
 MAX_PRICE_CENTS = 1_000_000
 MAX_DISCOUNT_BPS = 5000
 MAX_COMMISSION_BPS = 5000
+MIN_REFERRAL_MONTHS = 1
+MAX_REFERRAL_MONTHS = 36
 
 
 def round_half_up_div(numerator: int, denominator: int) -> int:
@@ -58,8 +60,10 @@ def quote_founding(price_cents: int, platform_fee_bps: int) -> Quote:
 
 
 def quote_referral(
-    list_price_cents: int, discount_bps: int, commission_bps: int, platform_fee_bps: int
+    monthly_price_cents: int, months: int, discount_bps: int, commission_bps: int, platform_fee_bps: int
 ) -> Quote:
+    """A referred friend prepays `months` of the regular monthly plan, minus their discount."""
+    list_price_cents = monthly_price_cents * months
     discount = apply_bps(list_price_cents, discount_bps)
     amount = list_price_cents - discount
     return Quote(
@@ -78,6 +82,7 @@ def quote_referral(
 def offer_problems(
     founding_price_cents: int,
     referral_list_price_cents: int,
+    referral_months: int,
     referral_discount_bps: int,
     commission_bps: int,
     platform_fee_bps: int,
@@ -89,6 +94,10 @@ def offer_problems(
     ):
         if not MIN_PRICE_CENTS <= value <= MAX_PRICE_CENTS:
             problems.append(f"{name} must be between {MIN_PRICE_CENTS} and {MAX_PRICE_CENTS}")
+    if not MIN_REFERRAL_MONTHS <= referral_months <= MAX_REFERRAL_MONTHS:
+        problems.append(f"referral_months must be between {MIN_REFERRAL_MONTHS} and {MAX_REFERRAL_MONTHS}")
+    elif referral_list_price_cents * referral_months > MAX_PRICE_CENTS:
+        problems.append(f"monthly price times months must be at most {MAX_PRICE_CENTS}")
     if not 0 <= referral_discount_bps <= MAX_DISCOUNT_BPS:
         problems.append("referral_discount_bps must be between 0 and 5000")
     if not 0 <= commission_bps <= MAX_COMMISSION_BPS:
@@ -96,7 +105,7 @@ def offer_problems(
     if problems:
         return problems
     referral = quote_referral(
-        referral_list_price_cents, referral_discount_bps, commission_bps, platform_fee_bps
+        referral_list_price_cents, referral_months, referral_discount_bps, commission_bps, platform_fee_bps
     )
     if referral.commission_cents + referral.platform_fee_cents >= referral.amount_cents:
         problems.append("commission plus platform fee must be below the discounted referral price")

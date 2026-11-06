@@ -119,6 +119,7 @@ OFFER = {
     "founding_price_cents": 4900,
     "founding_spots_cap": 3,
     "referral_list_price_cents": 10000,
+    "referral_months": 1,
     "referral_discount_bps": 2000,
     "commission_bps": 2500,
 }

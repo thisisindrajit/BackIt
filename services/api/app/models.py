@@ -143,6 +143,7 @@ class Campaign(TimestampMixin, Base):
         CheckConstraint(
             "referral_list_price_cents BETWEEN 100 AND 1000000", name="referral_price_range"
         ),
+        CheckConstraint("referral_months BETWEEN 1 AND 36", name="referral_months_range"),
         CheckConstraint("referral_discount_bps BETWEEN 0 AND 5000", name="discount_bps_range"),
         CheckConstraint("commission_bps BETWEEN 0 AND 5000", name="commission_bps_range"),
         CheckConstraint("platform_fee_bps BETWEEN 0 AND 5000", name="platform_fee_bps_range"),
@@ -165,7 +166,9 @@ class Campaign(TimestampMixin, Base):
     founding_price_cents: Mapped[int] = mapped_column(Integer)
     founding_spots_cap: Mapped[int] = mapped_column(Integer)
     founding_spots_taken: Mapped[int] = mapped_column(Integer, default=0)
+    # Regular monthly price; referred friends prepay referral_months of it, minus their discount.
     referral_list_price_cents: Mapped[int] = mapped_column(Integer)
+    referral_months: Mapped[int] = mapped_column(Integer, default=12, server_default="12")
     referral_discount_bps: Mapped[int] = mapped_column(Integer)
     commission_bps: Mapped[int] = mapped_column(Integer)
     platform_fee_bps: Mapped[int] = mapped_column(Integer)

@@ -36,6 +36,7 @@ export type Values = {
   founding_price: string;
   founding_spots_cap: string;
   referral_list_price: string;
+  referral_months: string;
   referral_discount: string;
   commission: string;
   offer_type: OfferType;
@@ -46,7 +47,7 @@ export const fromCents = (c: number) => (c / 100).toString();
 export const fromBps = (b: number) => (b / 100).toString();
 
 export function toValues(
-  c: Pick<Campaign, "headline" | "summary" | "story" | "founding_price_cents" | "founding_spots_cap" | "referral_list_price_cents" | "referral_discount_bps" | "commission_bps"> & { offer?: Offer },
+  c: Pick<Campaign, "headline" | "summary" | "story" | "founding_price_cents" | "founding_spots_cap" | "referral_list_price_cents" | "referral_months" | "referral_discount_bps" | "commission_bps"> & { offer?: Offer },
   slug: string,
 ): Values {
   const offer = c.offer ?? { type: "lifetime" as const, value: null };
@@ -58,6 +59,7 @@ export function toValues(
     founding_price: fromCents(c.founding_price_cents),
     founding_spots_cap: String(c.founding_spots_cap),
     referral_list_price: fromCents(c.referral_list_price_cents),
+    referral_months: String(c.referral_months),
     referral_discount: fromBps(c.referral_discount_bps),
     commission: fromBps(c.commission_bps),
     offer_type: offer.type,
@@ -74,6 +76,7 @@ export function toBody(v: Values) {
     founding_price_cents: dollarsToCents(v.founding_price),
     founding_spots_cap: Number(v.founding_spots_cap),
     referral_list_price_cents: dollarsToCents(v.referral_list_price),
+    referral_months: Number(v.referral_months),
     referral_discount_bps: percentToBps(v.referral_discount),
     commission_bps: percentToBps(v.commission),
     offer_type: v.offer_type,
@@ -86,7 +89,7 @@ export function offerValue(v: Pick<Values, "offer_type" | "offer_value">): numbe
   return v.offer_type === "voucher" ? dollarsToCents(v.offer_value) : Math.round(Number(v.offer_value));
 }
 
-function months(n: number) {
+export function months(n: number) {
   if (n % 12 === 0) return n === 12 ? "1 year" : `${n / 12} years`;
   return n === 1 ? "1 month" : `${n} months`;
 }
@@ -135,6 +138,8 @@ export function OfferFields({
 }) {
   const reward = rewardPhrase(values.offer_type, values.offer_value);
   const spots = Number(values.founding_spots_cap);
+  const prepaid = Number(values.referral_months);
+  const prepaidText = Number.isInteger(prepaid) && prepaid > 0 ? `${prepaid === 1 ? "1 month" : `${prepaid} months`}` : "a set number of months";
   return (
     <>
       <OfferPicker type={values.offer_type} value={values.offer_value} disabled={disabled} onChange={onOfferChange} />
@@ -155,9 +160,9 @@ export function OfferFields({
       <FieldSet>
         <FieldLegend variant="label">Friends they refer</FieldLegend>
         <FieldDescription>
-          Friends get the same thing through a backer’s link. They pay one month of your regular price minus their discount, once, and the backer earns a share.
+          Friends don’t get the founding offer. Through a backer’s link they prepay {prepaidText} of your regular plan, minus their discount, once. The backer earns a share.
         </FieldDescription>
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2">
           <MoneyField
             id="referral_list_price"
             label="Regular price"
@@ -167,6 +172,16 @@ export function OfferFields({
             onChange={set("referral_list_price")}
             disabled={disabled}
           />
+          <Field>
+            <FieldLabel htmlFor="referral_months">Months friends prepay</FieldLabel>
+            <InputGroup>
+              <InputGroupInput id="referral_months" type="number" min={1} max={36} required value={values.referral_months} onChange={set("referral_months")} disabled={disabled} />
+              <InputGroupAddon align="inline-end">
+                <InputGroupText>months</InputGroupText>
+              </InputGroupAddon>
+            </InputGroup>
+            <FieldDescription>Paid up front, from 1 to 36.</FieldDescription>
+          </Field>
           <PercentField id="referral_discount" label="Friend’s discount" value={values.referral_discount} onChange={set("referral_discount")} disabled={disabled} />
           <PercentField id="commission" label="Backer’s share" value={values.commission} onChange={set("commission")} disabled={disabled} />
         </div>
@@ -178,6 +193,7 @@ export function OfferFields({
         foundingCents={dollarsToCents(values.founding_price)}
         spots={spots}
         listCents={dollarsToCents(values.referral_list_price)}
+        prepaidMonths={prepaid}
         discountBps={percentToBps(values.referral_discount)}
         commissionBps={percentToBps(values.commission)}
         feeBps={feeBps}
@@ -289,6 +305,7 @@ export function OfferAdvisor({ listCents, request, onApply }: { listCents: numbe
   const rows: [string, string, string][] = [
     ["Price", money(idea.founding_price_cents), idea.reasons.founding_price],
     ["Spots", String(idea.founding_spots_cap), idea.reasons.spots],
+    ["Friends prepay", `${idea.referral_months} mo`, `${money(p.friend_pays_cents)} once, after their discount.`],
     ["Friend’s discount", pct(idea.referral_discount_bps), idea.reasons.discount],
     ["Backer’s share", pct(idea.commission_bps), idea.reasons.commission],
   ];
@@ -348,6 +365,7 @@ function OfferSummary({
   foundingCents,
   spots,
   listCents,
+  prepaidMonths,
   discountBps,
   commissionBps,
   feeBps,
@@ -358,23 +376,26 @@ function OfferSummary({
   foundingCents: number;
   spots: number;
   listCents: number;
+  prepaidMonths: number;
   discountBps: number;
   commissionBps: number;
   feeBps: number;
 }) {
   const founding = Number.isFinite(foundingCents) && foundingCents > 0;
-  const referral = [listCents, discountBps, commissionBps].every(Number.isFinite) && listCents > 0;
+  const prepaid = Math.round(prepaidMonths);
+  const referral = [listCents, discountBps, commissionBps].every(Number.isFinite) && listCents > 0 && prepaid > 0;
   if (!founding && !referral) return null;
-  const paid = listCents - applyBps(listCents, discountBps);
+  const total = listCents * prepaid;
+  const paid = total - applyBps(total, discountBps);
   const share = applyBps(paid, commissionBps);
   const kept = paid - share - applyBps(paid, feeBps);
   const period = Math.round(periodMonths);
   let perMonth: string | null = null;
   if (founding && type === "access_period" && period > 0) {
     perMonth = `That works out to ${money(Math.round(foundingCents / period))}/month.`;
-  } else if (founding && referral && (type === "lifetime" || type === "access_period")) {
+  } else if (founding && type === "lifetime" && listCents > 0 && foundingCents >= listCents) {
     const n = foundingCents / listCents;
-    perMonth = `That’s the same as ${n < 1 ? "less than 1 month" : `about ${+n.toFixed(1)} ${n === 1 ? "month" : "months"}`} at your ${money(listCents)}/month price.`;
+    perMonth = `That’s about ${+n.toFixed(1)} ${n === 1 ? "month" : "months"} of your ${money(listCents)}/month plan.`;
   }
   return (
     <div className="flex flex-col gap-1.5 rounded-2xl bg-accent/70 px-4 py-3 text-sm text-pretty text-accent-foreground">
@@ -387,8 +408,8 @@ function OfferSummary({
       ) : null}
       {referral ? (
         <p>
-          A friend they refer pays <span className="tabular font-medium">{money(paid)}</span> once for the same thing, instead of{" "}
-          <span className="tabular">{money(listCents)}</span>/month. Their backer earns{" "}
+          A friend they refer pays <span className="tabular font-medium">{money(paid)}</span> once for {prepaid === 1 ? "1 month" : `${prepaid} months`}, instead of{" "}
+          <span className="tabular">{money(total)}</span> ({money(listCents)}/month). Their backer earns{" "}
           <span className="tabular font-medium">{money(share)}</span>, and you keep <span className="tabular font-medium">{money(kept)}</span> after BackIt’s{" "}
           {pct(feeBps)} fee, before PayPal fees.
         </p>

@@ -12,8 +12,7 @@ from app.errors import AppError, forbidden, not_found
 from app.ids import new_id, utcnow
 from app.models import AccessReport, Backing, Campaign, Commission, Order, Product, Profile
 from app.money import quote_founding, quote_referral
-from app.offer_types import offer_label
-from app.presenters import seller_connection
+from app.presenters import offer_out, seller_connection
 from app.providers.paypal import CaptureResult, PayPalProvider, ProviderError
 from app.schemas import OrderCreate
 from app.security import public_ref
@@ -157,7 +156,8 @@ def create_order(db: Session, user: Profile, campaign_id: str, body: OrderCreate
         )
         if referrer.user_id == user.id or same_email:
             raise AppError(422, "self_referral", "You cannot use your own referral code")
-        quote = quote_referral(campaign.referral_list_price_cents, campaign.referral_discount_bps,
+        quote = quote_referral(campaign.referral_list_price_cents, campaign.referral_months,
+                               campaign.referral_discount_bps,
                                campaign.commission_bps, campaign.platform_fee_bps)
     else:
         if _founding_backing(db, campaign.id, user.id):
@@ -461,8 +461,7 @@ def finalize_capture(db: Session, order: Order, result: CaptureResult, *, source
             "amount_cents": order.amount_cents,
             "currency": order.currency,
             "referral_id": order.referrer_backing_id,
-            "offer": {"type": campaign.offer_type, "value": campaign.offer_value,
-                      "label": offer_label(campaign.offer_type, campaign.offer_value)},
+            "offer": offer_out(campaign, order.kind).model_dump(),
         }, order_id=order.id)
 
     notify_sale(db, order=order, campaign=campaign, product=product, buyer=buyer,

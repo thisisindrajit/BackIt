@@ -31,7 +31,7 @@ def redeem(
         status="redeemed" if fresh else "already_redeemed",
         order_id=order.id,
         plan_id=order.kind,  # type: ignore[arg-type]
-        offer=offer_out(campaign),
+        offer=offer_out(campaign, order.kind),
         badge_number=backing.badge_number,
         buyer_email=email,
         user_ref=backing.claimed_by or body.user_ref,

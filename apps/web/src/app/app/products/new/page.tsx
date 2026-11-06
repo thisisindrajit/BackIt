@@ -43,6 +43,7 @@ const initialCampaign: Values = {
   founding_price: "99",
   founding_spots_cap: "100",
   referral_list_price: "",
+  referral_months: "12",
   referral_discount: "20",
   commission: "25",
   offer_type: "lifetime",
@@ -85,12 +86,13 @@ export default function NewCampaignPage() {
 
   function offerOrNull() {
     const o = toBody({ ...values, slug });
-    const numbers = [o.founding_price_cents, o.founding_spots_cap, o.referral_list_price_cents, o.referral_discount_bps, o.commission_bps];
+    const numbers = [o.founding_price_cents, o.founding_spots_cap, o.referral_list_price_cents, o.referral_months, o.referral_discount_bps, o.commission_bps];
     return numbers.every(Number.isFinite) && o.founding_price_cents >= 100 && o.referral_list_price_cents >= 100
       ? {
           founding_price_cents: o.founding_price_cents,
           founding_spots_cap: o.founding_spots_cap,
           referral_list_price_cents: o.referral_list_price_cents,
+          referral_months: o.referral_months,
           referral_discount_bps: o.referral_discount_bps,
           commission_bps: o.commission_bps,
         }
@@ -207,6 +209,7 @@ export default function NewCampaignPage() {
                     list_price_cents: dollarsToCents(values.referral_list_price),
                     offer_type: values.offer_type,
                     offer_value: offerValue(values),
+                    referral_months: Number(values.referral_months) || 12,
                   },
                 })
               }
@@ -215,6 +218,7 @@ export default function NewCampaignPage() {
                   ...v,
                   founding_price: fromCents(o.founding_price_cents),
                   founding_spots_cap: String(o.founding_spots_cap),
+                  referral_months: String(o.referral_months),
                   referral_discount: fromBps(o.referral_discount_bps),
                   commission: fromBps(o.commission_bps),
                 }))

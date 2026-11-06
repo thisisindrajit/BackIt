@@ -115,7 +115,11 @@ def verification_out(v: RevenueVerification | None) -> VerificationOut | None:
     )
 
 
-def offer_out(c: Campaign) -> OfferOut:
+def offer_out(c: Campaign, kind: str = "founding") -> OfferOut:
+    """What a purchase unlocks: the founding offer, or prepaid months of the regular plan for referrals."""
+    if kind == "referral":
+        return OfferOut(type="access_period", value=c.referral_months,
+                        label=offer_label("access_period", c.referral_months))
     return OfferOut(
         type=c.offer_type,  # type: ignore[arg-type]
         value=c.offer_value,
@@ -137,6 +141,7 @@ def campaign_out(c: Campaign) -> CampaignOut:
         founding_spots_cap=c.founding_spots_cap,
         founding_spots_taken=c.founding_spots_taken,
         referral_list_price_cents=c.referral_list_price_cents,
+        referral_months=c.referral_months,
         referral_discount_bps=c.referral_discount_bps,
         commission_bps=c.commission_bps,
         platform_fee_bps=c.platform_fee_bps,
@@ -196,8 +201,9 @@ def order_out(db: Session, order: Order) -> OrderOut:
     assert product is not None
     backing = db.get(Backing, order.backing_id) if order.backing_id else None
     owner = db.get(Profile, product.owner_id)
-    reward = quote_referral(campaign.referral_list_price_cents, campaign.referral_discount_bps,
-                            campaign.commission_bps, campaign.platform_fee_bps).commission_cents
+    reward = quote_referral(campaign.referral_list_price_cents, campaign.referral_months,
+                            campaign.referral_discount_bps, campaign.commission_bps,
+                            campaign.platform_fee_bps).commission_cents
     return OrderOut(
         id=order.id,
         campaign_id=order.campaign_id,
@@ -206,10 +212,11 @@ def order_out(db: Session, order: Order) -> OrderOut:
         product_url=product.url,
         builder_name=owner.display_name if owner else "",
         access_terms=product.access_terms,
-        offer=offer_out(campaign),
+        offer=offer_out(campaign, order.kind),
         referral_reward_cents=reward,
         kind=order.kind,  # type: ignore[arg-type]
         state=order.state,  # type: ignore[arg-type]
+        referral_months=campaign.referral_months if order.kind == "referral" else None,
         list_price_cents=order.list_price_cents,
         discount_cents=order.discount_cents,
         amount_cents=order.amount_cents,
@@ -288,7 +295,7 @@ def backing_out(db: Session, backing: Backing) -> BackingOut:
             product_url=product.url,
             builder_name=owner.display_name if owner else "Builder",
             status=campaign.status,  # type: ignore[arg-type]
-            offer=offer_out(campaign),
+            offer=offer_out(campaign, backing.kind),
         ),
         badge_number=backing.badge_number,
         referral_code=backing.referral_code,

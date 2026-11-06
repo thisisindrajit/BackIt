@@ -63,8 +63,8 @@ def list_public_campaigns(
     ).all()
     cards = []
     for campaign, product, builder_name, total, recent in rows:
-        quote = quote_referral(campaign.referral_list_price_cents, campaign.referral_discount_bps,
-                               campaign.commission_bps, campaign.platform_fee_bps)
+        quote = quote_referral(campaign.referral_list_price_cents, campaign.referral_months,
+                               campaign.referral_discount_bps, campaign.commission_bps, campaign.platform_fee_bps)
         cards.append(PublicCampaignCard(
             slug=campaign.slug,
             headline=campaign.headline,
@@ -97,7 +97,7 @@ def get_public_campaign(
     assert product is not None
     owner = db.get(Profile, product.owner_id)
     conn = seller_connection(db, product.id)
-    quote = quote_referral(campaign.referral_list_price_cents, campaign.referral_discount_bps,
+    quote = quote_referral(campaign.referral_list_price_cents, campaign.referral_months, campaign.referral_discount_bps,
                            campaign.commission_bps, campaign.platform_fee_bps)
     referrer = None
     backing = find_referrer(db, campaign.id, ref)
@@ -126,6 +126,8 @@ def get_public_campaign(
             spots_left=max(campaign.founding_spots_cap - campaign.founding_spots_taken, 0),
         ),
         referral=PublicReferral(
+            monthly_price_cents=campaign.referral_list_price_cents,
+            months=campaign.referral_months,
             list_price_cents=quote.list_price_cents,
             discount_bps=quote.discount_bps,
             price_cents=quote.amount_cents,

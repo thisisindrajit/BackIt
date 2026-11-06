@@ -29,6 +29,7 @@ Slug = Annotated[str, AfterValidator(_check_slug)]
 PriceCents = Annotated[int, Field(ge=100, le=1_000_000)]
 RateBps = Annotated[int, Field(ge=0, le=5000)]
 Spots = Annotated[int, Field(ge=1, le=10_000)]
+Months = Annotated[int, Field(ge=1, le=36)]
 OfferType = Literal["lifetime", "access_period", "discount", "voucher", "custom"]
 OfferValue = Annotated[int, Field(ge=1, le=1_000_000)]
 
@@ -171,6 +172,7 @@ class CampaignOut(BaseModel):
     founding_spots_cap: int
     founding_spots_taken: int
     referral_list_price_cents: int
+    referral_months: int
     referral_discount_bps: int
     commission_bps: int
     platform_fee_bps: int
@@ -252,6 +254,7 @@ class CampaignDraftIn(StrictModel):
 class OfferSuggestionIn(StrictModel):
     notes: Annotated[str, Field(max_length=4000)] | None = None
     list_price_cents: PriceCents
+    referral_months: Months = 12
     offer_type: OfferType = "lifetime"
     offer_value: OfferValue | None = None
 
@@ -260,6 +263,7 @@ class OfferTerms(StrictModel):
     founding_price_cents: PriceCents
     founding_spots_cap: Spots
     referral_list_price_cents: PriceCents
+    referral_months: Months = 12
     referral_discount_bps: RateBps
     commission_bps: RateBps
 
@@ -274,6 +278,7 @@ class NewOfferSuggestionIn(StrictModel):
     product: ProductFacts
     notes: Annotated[str, Field(max_length=4000)] | None = None
     list_price_cents: PriceCents
+    referral_months: Months = 12
     offer_type: OfferType = "lifetime"
     offer_value: OfferValue | None = None
 
@@ -299,6 +304,7 @@ class OfferSuggestion(BaseModel):
     founding_price_cents: int
     founding_spots_cap: int
     referral_list_price_cents: int
+    referral_months: int
     referral_discount_bps: int
     commission_bps: int
     platform_fee_bps: int
@@ -314,6 +320,7 @@ class CampaignDraft(BaseModel):
     founding_price_cents: int
     founding_spots_cap: int
     referral_list_price_cents: int
+    referral_months: int
     referral_discount_bps: int
     commission_bps: int
     disclosure: str
@@ -333,6 +340,7 @@ class CampaignFields(StrictModel):
     founding_price_cents: PriceCents
     founding_spots_cap: Spots
     referral_list_price_cents: PriceCents
+    referral_months: Months = 12
     referral_discount_bps: RateBps
     commission_bps: RateBps
     offer_type: OfferType = "lifetime"
@@ -351,6 +359,7 @@ class CampaignUpdate(StrictModel):
     founding_price_cents: PriceCents | None = None
     founding_spots_cap: Spots | None = None
     referral_list_price_cents: PriceCents | None = None
+    referral_months: Months | None = None
     referral_discount_bps: RateBps | None = None
     commission_bps: RateBps | None = None
     offer_type: OfferType | None = None
@@ -385,6 +394,8 @@ class PublicFounding(BaseModel):
 
 
 class PublicReferral(BaseModel):
+    monthly_price_cents: int
+    months: int
     list_price_cents: int
     discount_bps: int
     price_cents: int
@@ -505,6 +516,7 @@ class OrderOut(BaseModel):
     referral_reward_cents: int
     kind: Literal["founding", "referral"]
     state: OrderState
+    referral_months: int | None
     list_price_cents: int
     discount_cents: int
     amount_cents: int

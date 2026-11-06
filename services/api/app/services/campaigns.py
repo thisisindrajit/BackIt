@@ -31,6 +31,7 @@ PRICE_FIELDS = (
     "founding_price_cents",
     "founding_spots_cap",
     "referral_list_price_cents",
+    "referral_months",
     "referral_discount_bps",
     "commission_bps",
 )
@@ -40,19 +41,22 @@ OFFER_FIELDS = ("offer_type", "offer_value")
 DEFAULT_OFFER = {
     "founding_price_cents": 9900,
     "founding_spots_cap": 100,
-    "referral_list_price_cents": 14900,
+    "referral_list_price_cents": 1500,
+    "referral_months": 12,
     "referral_discount_bps": 2000,
     "commission_bps": 2500,
 }
 
 
-def disclosure_text(referral_discount_bps: int, commission_bps: int, list_price_cents: int) -> str:
-    q = quote_referral(list_price_cents, referral_discount_bps, commission_bps,
+def disclosure_text(referral_discount_bps: int, commission_bps: int, list_price_cents: int,
+                    referral_months: int) -> str:
+    q = quote_referral(list_price_cents, referral_months, referral_discount_bps, commission_bps,
                        get_settings().platform_fee_bps)
     return (
         f"Backers who share their referral link earn a {commission_bps / 100:g}% commission "
         f"({format_usd(q.commission_cents)}) on each referred purchase, paid by the builder after a "
-        f"{get_settings().hold_days}-day hold. Referred buyers get {referral_discount_bps / 100:g}% off. "
+        f"{get_settings().hold_days}-day hold. Referred buyers get {referral_discount_bps / 100:g}% off "
+        f"{referral_months} prepaid months. "
         "This is a product pre-purchase, not an investment."
     )
 
@@ -108,7 +112,8 @@ def generate_draft(db: Session, user: Profile, product: Product | ProductFacts,
         _check_offer(offer)
 
     settings = get_settings()
-    q = quote_referral(offer["referral_list_price_cents"], offer["referral_discount_bps"],
+    months = offer.get("referral_months", 12)
+    q = quote_referral(offer["referral_list_price_cents"], months, offer["referral_discount_bps"],
                        offer["commission_bps"], settings.platform_fee_bps)
     founding_price = format_usd(offer["founding_price_cents"])
     list_price = format_usd(offer["referral_list_price_cents"])
@@ -117,8 +122,8 @@ def generate_draft(db: Session, user: Profile, product: Product | ProductFacts,
     discount_pct = f"{offer['referral_discount_bps'] / 100:g}%"
     offer_facts = (
         f"Founding price: {founding_price} for the first {offer['founding_spots_cap']} backers.\n"
-        f"Regular price: {list_price}. Friends who buy through a backer's link pay {friend_price} "
-        f"({discount_pct} off), and the backer earns {reward} per sale."
+        f"Regular price: {list_price}/month. Friends who buy through a backer's link prepay {months} months "
+        f"for {friend_price} ({discount_pct} off), and the backer earns {reward} per sale."
     )
 
     def template() -> _DraftText:
@@ -135,9 +140,10 @@ def generate_draft(db: Session, user: Profile, product: Product | ProductFacts,
                 f"## What you get\n\n{product.access_terms or 'Lifetime access to ' + product.name + '.'}\n\n"
                 "## The founding offer\n\n"
                 f"- **{founding_price} once**, for the first {offer['founding_spots_cap']} founding backers "
-                f"(the regular price is {list_price}).\n"
+                f"(the regular price is {list_price}/month).\n"
                 "- A permanent, numbered **founding backer badge**.\n"
-                f"- Your own **referral link**. Friends who use it pay {friend_price} ({discount_pct} off), "
+                f"- Your own **referral link**. Friends who use it get {months} months for {friend_price} "
+                f"({discount_pct} off), "
                 f"and you earn **{reward}** for each one once their refund window closes.\n\n"
                 "## What your backing unlocks\n\n"
                 f"Founding backers fund the next stage of {product.name} and get every improvement "
@@ -185,7 +191,7 @@ def generate_draft(db: Session, user: Profile, product: Product | ProductFacts,
         story=out.story,
         disclosure=disclosure_text(
             offer["referral_discount_bps"], offer["commission_bps"],
-            offer["referral_list_price_cents"],
+            offer["referral_list_price_cents"], months,
         ),
         missing_evidence=missing_evidence(db, product) if saved else [],
         source=source,
@@ -198,6 +204,7 @@ def _check_offer(values: dict[str, int]) -> None:
     problems = offer_problems(
         values["founding_price_cents"],
         values["referral_list_price_cents"],
+        values.get("referral_months", 12),
         values["referral_discount_bps"],
         values["commission_bps"],
         get_settings().platform_fee_bps,
@@ -242,6 +249,7 @@ def add_campaign(db: Session, user: Profile, product: Product, body: CampaignFie
         founding_spots_cap=body.founding_spots_cap,
         founding_spots_taken=0,
         referral_list_price_cents=body.referral_list_price_cents,
+        referral_months=body.referral_months,
         referral_discount_bps=body.referral_discount_bps,
         commission_bps=body.commission_bps,
         offer_type=body.offer_type,
@@ -301,7 +309,7 @@ def readiness(db: Session, campaign: Campaign, product: Product) -> Readiness:
     conn = seller_connection(db, product.id)
     v = latest_verification(db, product.id)
     problems = offer_problems(
-        campaign.founding_price_cents, campaign.referral_list_price_cents,
+        campaign.founding_price_cents, campaign.referral_list_price_cents, campaign.referral_months,
         campaign.referral_discount_bps, campaign.commission_bps, campaign.platform_fee_bps,
     )
     slug_ok = (
