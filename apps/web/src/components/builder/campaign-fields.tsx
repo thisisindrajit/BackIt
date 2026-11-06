@@ -150,7 +150,8 @@ export function OfferPicker({
 
 export const STORY_MAX = 4000;
 
-export function OfferAdvisor({ request, onApply }: { request: () => Promise<OfferSuggestion>; onApply: (o: OfferSuggestion) => void }) {
+export function OfferAdvisor({ listCents, request, onApply }: { listCents: number; request: () => Promise<OfferSuggestion>; onApply: (o: OfferSuggestion) => void }) {
+  const hasListPrice = Number.isFinite(listCents) && listCents > 100;
   const [idea, setIdea] = useState<OfferSuggestion | null>(null);
   const { pending, run } = useAction();
 
@@ -164,9 +165,13 @@ export function OfferAdvisor({ request, onApply }: { request: () => Promise<Offe
       <div className="flex flex-col gap-3 rounded-lg border border-dashed p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-col gap-0.5">
           <span className="text-sm font-medium">Not sure what to charge?</span>
-          <span className="text-sm text-muted-foreground">The offer advisor suggests prices, spots and commission from your product details, and your verified revenue once you add it.</span>
+          <span className="text-sm text-muted-foreground">
+            {hasListPrice
+              ? "The offer advisor builds a founding price, spots, discount and commission around your list price, using your product details and verified revenue."
+              : "Enter your list price below, and the offer advisor suggests a founding price, spots, discount and commission around it."}
+          </span>
         </div>
-        <Button type="button" variant="outline" className="shrink-0" onClick={suggest} disabled={pending === "suggest"}>
+        <Button type="button" variant="outline" className="shrink-0" onClick={suggest} disabled={!hasListPrice || pending === "suggest"}>
           {pending === "suggest" ? <Spinner data-icon="inline-start" /> : <SparklesIcon data-icon="inline-start" />}
           Suggest an offer
         </Button>
@@ -178,7 +183,6 @@ export function OfferAdvisor({ request, onApply }: { request: () => Promise<Offe
   const rows: [string, string, string][] = [
     ["Founding price", money(idea.founding_price_cents), idea.reasons.founding_price],
     ["Spots", String(idea.founding_spots_cap), idea.reasons.spots],
-    ["List price", money(idea.referral_list_price_cents), idea.reasons.list_price],
     ["Buyer discount", pct(idea.referral_discount_bps), idea.reasons.discount],
     ["Backer commission", pct(idea.commission_bps), idea.reasons.commission],
   ];
@@ -189,6 +193,7 @@ export function OfferAdvisor({ request, onApply }: { request: () => Promise<Offe
         <SparklesIcon className="size-4" />
         Suggested offer
         <Badge variant="outline">{idea.source === "ai" ? "AI" : "Template"}</Badge>
+        <span className="font-normal text-muted-foreground">for your {money(idea.referral_list_price_cents)} list price</span>
       </div>
       <dl className="flex flex-col divide-y divide-border rounded-md border bg-background text-sm">
         {rows.map(([label, value, reason]) => (

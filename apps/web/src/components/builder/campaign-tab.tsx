@@ -186,22 +186,21 @@ function CampaignForm({ product, campaign, draft, onSaved }: { product: Product;
             </Field>
             {locked ? null : (
               <OfferAdvisor
-                request={() => {
-                  const listCents = dollarsToCents(values.referral_list_price);
-                  return authedApi<OfferSuggestion>(`/products/${product.id}/offer-suggestion`, {
+                listCents={dollarsToCents(values.referral_list_price)}
+                request={() =>
+                  authedApi<OfferSuggestion>(`/products/${product.id}/offer-suggestion`, {
                     method: "POST", readOnly: true,
                     body: {
                       notes: [product.description, values.summary].filter(Boolean).join("\n\n").slice(0, 2000) || null,
-                      list_price_cents: Number.isFinite(listCents) && listCents >= 100 ? listCents : null,
+                      list_price_cents: dollarsToCents(values.referral_list_price),
                     },
-                  });
-                }}
+                  })
+                }
                 onApply={(o) =>
                   setValues((v) => ({
                     ...v,
                     founding_price: fromCents(o.founding_price_cents),
                     founding_spots_cap: String(o.founding_spots_cap),
-                    referral_list_price: fromCents(o.referral_list_price_cents),
                     referral_discount: fromBps(o.referral_discount_bps),
                     commission: fromBps(o.commission_bps),
                   }))

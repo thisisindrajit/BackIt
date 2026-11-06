@@ -44,7 +44,7 @@ const initialCampaign: Values = {
   story: "",
   founding_price: "99",
   founding_spots_cap: "100",
-  referral_list_price: "149",
+  referral_list_price: "",
   referral_discount: "20",
   commission: "25",
   offer_type: "lifetime",
@@ -200,20 +200,18 @@ export default function NewCampaignPage() {
         <FormSection title="Founding offer" description="Founding backers pay once, get a permanent numbered badge, and a referral link that earns them a commission.">
           {canAskAi ? (
             <OfferAdvisor
-              request={() => {
-                // The untouched default list price is a placeholder; let the server read the real price from the description.
-                const listCents = values.referral_list_price === initialCampaign.referral_list_price ? NaN : dollarsToCents(values.referral_list_price);
-                return authedApi<OfferSuggestion>("/products/offer-suggestion", {
+              listCents={dollarsToCents(values.referral_list_price)}
+              request={() =>
+                authedApi<OfferSuggestion>("/products/offer-suggestion", {
                   method: "POST", readOnly: true,
-                  body: { product: facts(), list_price_cents: Number.isFinite(listCents) && listCents >= 100 ? listCents : null },
-                });
-              }}
+                  body: { product: facts(), list_price_cents: dollarsToCents(values.referral_list_price) },
+                })
+              }
               onApply={(o) =>
                 setValues((v) => ({
                   ...v,
                   founding_price: fromCents(o.founding_price_cents),
                   founding_spots_cap: String(o.founding_spots_cap),
-                  referral_list_price: fromCents(o.referral_list_price_cents),
                   referral_discount: fromBps(o.referral_discount_bps),
                   commission: fromBps(o.commission_bps),
                 }))
@@ -237,6 +235,7 @@ export default function NewCampaignPage() {
             <PercentField id="referral_discount" label="Buyer discount" value={values.referral_discount} onChange={setV("referral_discount")} />
             <PercentField id="commission" label="Backer commission" value={values.commission} onChange={setV("commission")} />
           </div>
+          <FieldDescription>List price is your regular one-time price for what backers get. Referred friends get their discount off it.</FieldDescription>
           <ReferralExample
             listCents={dollarsToCents(values.referral_list_price)}
             discountBps={percentToBps(values.referral_discount)}

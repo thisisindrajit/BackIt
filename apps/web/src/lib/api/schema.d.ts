@@ -1403,7 +1403,7 @@ export interface components {
             /** Notes */
             notes?: string | null;
             /** List Price Cents */
-            list_price_cents?: number | null;
+            list_price_cents: number;
         };
         /** NotificationList */
         NotificationList: {
@@ -1470,8 +1470,6 @@ export interface components {
             founding_price: string;
             /** Spots */
             spots: string;
-            /** List Price */
-            list_price: string;
             /** Discount */
             discount: string;
             /** Commission */
@@ -1504,7 +1502,7 @@ export interface components {
             /** Notes */
             notes?: string | null;
             /** List Price Cents */
-            list_price_cents?: number | null;
+            list_price_cents: number;
         };
         /** OfferTerms */
         OfferTerms: {

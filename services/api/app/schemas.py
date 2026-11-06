@@ -251,7 +251,7 @@ class CampaignDraftIn(StrictModel):
 
 class OfferSuggestionIn(StrictModel):
     notes: Annotated[str, Field(max_length=4000)] | None = None
-    list_price_cents: PriceCents | None = None
+    list_price_cents: PriceCents
 
 
 class OfferTerms(StrictModel):
@@ -271,13 +271,12 @@ class NewCampaignDraftIn(StrictModel):
 class NewOfferSuggestionIn(StrictModel):
     product: ProductFacts
     notes: Annotated[str, Field(max_length=4000)] | None = None
-    list_price_cents: PriceCents | None = None
+    list_price_cents: PriceCents
 
 
 class OfferReasons(BaseModel):
     founding_price: str
     spots: str
-    list_price: str
     discount: str
     commission: str
 

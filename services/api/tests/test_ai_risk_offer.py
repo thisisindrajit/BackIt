@@ -81,11 +81,11 @@ def test_offer_suggestion_template_is_valid(client, campaign) -> None:
     pid = campaign["product"]["id"]
     h = campaign["headers"]
     r = client.post(f"/v1/products/{pid}/offer-suggestion", headers=h,
-                    json={"notes": "Pro plan is $79 a year, for indie hackers."})
+                    json={"notes": "Pro plan is $79 a year, for indie hackers.",
+                          "list_price_cents": OFFER["referral_list_price_cents"]})
     assert r.status_code == 200, r.text
     s = r.json()
     assert s["source"] == "template"
-    # The campaign already exists, so its list price wins over the notes.
     assert s["referral_list_price_cents"] == OFFER["referral_list_price_cents"]
     assert s["founding_price_cents"] < s["referral_list_price_cents"]
     p = s["projection"]
@@ -95,22 +95,20 @@ def test_offer_suggestion_template_is_valid(client, campaign) -> None:
     assert all(s["reasons"].values())
 
 
-def test_offer_suggestion_reads_price_from_notes(client, auth) -> None:
+def test_offer_suggestion_keeps_the_builders_list_price(client, auth) -> None:
     h = auth("solo", "solo@example.com", "Sol Builder")
     product = client.post("/v1/products", headers=h, json={
         "name": "Notely", "url": "https://notely.example.com", "description": "Notes for devs",
         "access_terms": "Lifetime Pro", "refund_terms": "", "webhook_url": None,
     }).json()
-    s = client.post(f"/v1/products/{product['id']}/offer-suggestion", headers=h,
-                    json={"notes": "Pro is $79"}).json()
-    assert s["referral_list_price_cents"] == 7900
-    assert s["founding_price_cents"] == 4900
-    # Lifetime access to a subscription is priced as about two years of it, not one month.
-    s = client.post(f"/v1/products/{product['id']}/offer-suggestion", headers=h,
-                    json={"notes": "Pro is $12/month"}).json()
-    assert s["referral_list_price_cents"] == 28900
-    assert client.post(f"/v1/products/{product['id']}/offer-suggestion", headers=auth("intruder"),
-                       json={}).status_code in (403, 404)
+    url = f"/v1/products/{product['id']}/offer-suggestion"
+    s = client.post(url, headers=h, json={"notes": "Pro is $12/month", "list_price_cents": 7900}).json()
+    assert s["referral_list_price_cents"] == 7900 and s["founding_price_cents"] == 4900
+    assert "list_price" not in s["reasons"]
+    assert client.post(url, headers=h, json={"notes": "Pro is $79"}).status_code == 422
+    r = client.post(url, headers=h, json={"list_price_cents": 100})
+    assert r.status_code == 422 and r.json()["error"]["code"] == "list_price_too_low"
+    assert client.post(url, headers=auth("intruder"), json={"list_price_cents": 7900}).status_code in (403, 404)
 
 
 PRODUCT = {
@@ -123,7 +121,7 @@ def test_one_step_new_campaign(client, auth, db) -> None:
     h = auth("onestep", "one@example.com", "Ona Step")
     facts = {k: PRODUCT[k] for k in ("name", "url", "description", "access_terms", "refund_terms")}
     idea = client.post("/v1/products/offer-suggestion", headers=h,
-                       json={"product": facts, "notes": "Pro is $59 a year"}).json()
+                       json={"product": facts, "notes": "Pro is $59 a year", "list_price_cents": 11900}).json()
     assert idea["referral_list_price_cents"] == 11900 and idea["source"] == "template"
     offer = {k: idea[k] for k in ("founding_price_cents", "founding_spots_cap", "referral_list_price_cents",
                                   "referral_discount_bps", "commission_bps")}
