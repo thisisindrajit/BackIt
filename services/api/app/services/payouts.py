@@ -15,6 +15,7 @@ from app.config import get_settings
 from app.errors import AppError, forbidden, not_found
 from app.ids import new_id, utcnow
 from app.models import (
+    AccessReport,
     Backing,
     Commission,
     OutboxJob,
@@ -73,6 +74,12 @@ class Eligibility:
         return sha256_hex(json.dumps(canonical, sort_keys=True, separators=(",", ":")))
 
 
+def open_access_reports(db: Session, campaign_id: str) -> int:
+    """Any unresolved "I can't access what I paid for" report halts every reward payout."""
+    return int(db.scalar(select(func.count(AccessReport.id)).where(
+        AccessReport.campaign_id == campaign_id, AccessReport.status == "open")) or 0)
+
+
 def compute_eligibility(db: Session, product: Product) -> Eligibility:
     settings = get_settings()
     result = Eligibility()
@@ -92,6 +99,7 @@ def compute_eligibility(db: Session, product: Product) -> Eligibility:
     pending_refund_orders = set(db.scalars(
         select(Refund.order_id).where(Refund.state.in_(("requested", "pending")))
     ).all())
+    halted = open_access_reports(db, campaign.id) > 0
     groups: dict[str, list[Commission]] = defaultdict(list)
     for c in commissions:
         if c.id not in active_alloc:
@@ -123,7 +131,9 @@ def compute_eligibility(db: Session, product: Product) -> Eligibility:
         if not eligible:
             continue
         amount = sum(c.amount_cents for c in eligible)
-        if open_flags:
+        if halted:
+            exclude("access_report", eligible)
+        elif open_flags:
             exclude("risk_review", eligible)
         elif profile is None or not profile.payout_email or not profile.payout_email_verified:
             exclude("no_payout_email", eligible)
@@ -169,6 +179,7 @@ REASON_LABELS = {
     "no_payout_email": "missing a verified payout email",
     "risk_review": "under risk review",
     "refund_pending": "waiting on a pending refund",
+    "access_report": "paused because a backer reported they can't access the product",
 }
 
 
@@ -468,6 +479,8 @@ def _revalidate(db: Session, item: PayoutItem) -> str | None:
         RiskFlag.backing_id == item.backing_id, RiskFlag.status == "open"))
     if flags:
         return "risk_review"
+    if backing and open_access_reports(db, backing.campaign_id):
+        return "access_report"
     return None
 
 

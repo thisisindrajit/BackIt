@@ -11,6 +11,7 @@ import { StatusBadge } from "@/components/backit/status-badge";
 import { authedApi, useApi, useInvalidate } from "@/hooks/use-api";
 import { money, shortDate } from "@/lib/format";
 import type { SalesSummary } from "@/lib/api/types";
+import { AccessReports } from "./access-reports";
 import { ConfirmDialog } from "./confirm-dialog";
 import { useAction } from "@/hooks/use-action";
 
@@ -39,7 +40,7 @@ export function SalesTab({ productId }: { productId: string }) {
     );
     if (res) {
       setOpen(null);
-      void invalidate(`/products/${productId}/sales`, `/products/${productId}/payout-batches`);
+      void invalidate(`/products/${productId}/sales`, `/products/${productId}/payout-batches`, `/products/${productId}/access-reports`);
     }
   }
 
@@ -51,6 +52,7 @@ export function SalesTab({ productId }: { productId: string }) {
         <Stat label="BackIt fees" value={money(t.platform_fee_cents)} hint="Taken at checkout" />
         <Stat label="Owed to backers" value={money(t.commission_liability_cents)} hint={`${money(t.commission_paid_cents)} paid so far`} />
       </dl>
+      <AccessReports productId={productId} />
       {data.orders.length ? (
         <Table>
           <TableHeader>

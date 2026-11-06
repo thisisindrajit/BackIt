@@ -5,12 +5,27 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Field, FieldLabel } from "@/components/ui/field";
+import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { InputGroup, InputGroupAddon, InputGroupInput, InputGroupText } from "@/components/ui/input-group";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { useAction } from "@/hooks/use-action";
 import { dollarsToCents, money, percentToBps } from "@/lib/format";
-import type { Campaign, OfferSuggestion } from "@/lib/api/types";
+import type { Campaign, Offer, OfferSuggestion, OfferType } from "@/lib/api/types";
+
+export const OFFER_TYPES: { value: OfferType; label: string; hint: string }[] = [
+  { value: "lifetime", label: "Lifetime deal", hint: "Pay once, use it forever." },
+  { value: "access_period", label: "Access for a set time", hint: "Like 12 months of the paid plan." },
+  { value: "discount", label: "Discount coupon", hint: "A percentage off your product." },
+  { value: "voucher", label: "Voucher or credit", hint: "A fixed amount to spend in your product." },
+  { value: "custom", label: "Something else", hint: "Describe it in the Access field." },
+];
+
+const OFFER_VALUE: Partial<Record<OfferType, { label: string; unit: string; prefix?: boolean; placeholder: string }>> = {
+  access_period: { label: "Months of access", unit: "months", placeholder: "12" },
+  discount: { label: "Discount", unit: "%", placeholder: "40" },
+  voucher: { label: "Voucher amount", unit: "$", prefix: true, placeholder: "50" },
+};
 
 export type Values = {
   slug: string;
@@ -22,12 +37,18 @@ export type Values = {
   referral_list_price: string;
   referral_discount: string;
   commission: string;
+  offer_type: OfferType;
+  offer_value: string;
 };
 
 export const fromCents = (c: number) => (c / 100).toString();
 export const fromBps = (b: number) => (b / 100).toString();
 
-export function toValues(c: Pick<Campaign, "headline" | "summary" | "story" | "founding_price_cents" | "founding_spots_cap" | "referral_list_price_cents" | "referral_discount_bps" | "commission_bps">, slug: string): Values {
+export function toValues(
+  c: Pick<Campaign, "headline" | "summary" | "story" | "founding_price_cents" | "founding_spots_cap" | "referral_list_price_cents" | "referral_discount_bps" | "commission_bps"> & { offer?: Offer },
+  slug: string,
+): Values {
+  const offer = c.offer ?? { type: "lifetime" as const, value: null };
   return {
     slug,
     headline: c.headline,
@@ -38,6 +59,8 @@ export function toValues(c: Pick<Campaign, "headline" | "summary" | "story" | "f
     referral_list_price: fromCents(c.referral_list_price_cents),
     referral_discount: fromBps(c.referral_discount_bps),
     commission: fromBps(c.commission_bps),
+    offer_type: offer.type,
+    offer_value: offer.value == null ? "" : offer.type === "voucher" ? fromCents(offer.value) : String(offer.value),
   };
 }
 
@@ -52,7 +75,77 @@ export function toBody(v: Values) {
     referral_list_price_cents: dollarsToCents(v.referral_list_price),
     referral_discount_bps: percentToBps(v.referral_discount),
     commission_bps: percentToBps(v.commission),
+    offer_type: v.offer_type,
+    offer_value: !OFFER_VALUE[v.offer_type] ? null : v.offer_type === "voucher" ? dollarsToCents(v.offer_value) : Math.round(Number(v.offer_value)),
   };
+}
+
+export function OfferPicker({
+  type,
+  value,
+  onChange,
+  disabled,
+}: {
+  type: OfferType;
+  value: string;
+  onChange: (next: { offer_type: OfferType; offer_value: string }) => void;
+  disabled?: boolean;
+}) {
+  const meta = OFFER_VALUE[type];
+  const hint = OFFER_TYPES.find((o) => o.value === type)?.hint;
+  return (
+    <div className="grid gap-3 sm:grid-cols-2">
+      <Field>
+        <FieldLabel htmlFor="offer_type">What backers get</FieldLabel>
+        <Select
+          items={OFFER_TYPES}
+          value={type}
+          disabled={disabled}
+          onValueChange={(t) => t && onChange({ offer_type: t as OfferType, offer_value: t === type ? value : "" })}
+        >
+          <SelectTrigger id="offer_type" className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              {OFFER_TYPES.map((o) => (
+                <SelectItem key={o.value} value={o.value}>
+                  {o.label}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
+        <FieldDescription>{hint}</FieldDescription>
+      </Field>
+      {meta ? (
+        <Field>
+          <FieldLabel htmlFor="offer_value">{meta.label}</FieldLabel>
+          <InputGroup>
+            {meta.prefix ? (
+              <InputGroupAddon>
+                <InputGroupText>{meta.unit}</InputGroupText>
+              </InputGroupAddon>
+            ) : null}
+            <InputGroupInput
+              id="offer_value"
+              inputMode="decimal"
+              required
+              placeholder={meta.placeholder}
+              value={value}
+              disabled={disabled}
+              onChange={(e) => onChange({ offer_type: type, offer_value: e.target.value })}
+            />
+            {!meta.prefix ? (
+              <InputGroupAddon align="inline-end">
+                <InputGroupText>{meta.unit}</InputGroupText>
+              </InputGroupAddon>
+            ) : null}
+          </InputGroup>
+        </Field>
+      ) : null}
+    </div>
+  );
 }
 
 export const STORY_MAX = 4000;

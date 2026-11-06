@@ -28,6 +28,7 @@ const reasons: Record<string, string> = {
   no_payout_email: "No verified payout email yet",
   risk_review: "Held for review",
   refund_pending: "Refund pending",
+  access_report: "Paused: a backer reported they can’t access the product",
 };
 
 export function PayoutsTab({ productId }: { productId: string }) {
@@ -148,6 +149,12 @@ export function PayoutsTab({ productId }: { productId: string }) {
                   ))}
                 </ul>
               </div>
+            ) : null}
+            {preview.exclusions.some((e) => e.reason === "access_report") ? (
+              <p className="rounded-lg bg-accent px-3 py-2 text-sm text-accent-foreground">
+                Payouts are paused. A backer reported they can’t access what they bought. Reply from the Sales tab and fix it; payouts resume once they
+                mark it fixed or you refund them.
+              </p>
             ) : null}
             {preview.items.length ? (
               <Table>

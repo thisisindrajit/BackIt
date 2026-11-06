@@ -67,7 +67,7 @@ def test_founding_one_per_user(client, campaign, buy, auth) -> None:
     buy(cid, "alice")
     r = client.post(f"/v1/campaigns/{cid}/orders", headers=auth("alice"), json={"kind": "founding"})
     assert r.status_code == 409
-    assert r.json()["error"]["code"] == "already_backed"
+    assert r.json()["error"]["code"] == "already_purchased"
 
 
 def test_founding_sold_out_counts_reservations(client, campaign, buy, auth) -> None:
@@ -112,14 +112,14 @@ def test_referral_attribution_and_pricing(client, campaign, buy) -> None:
     assert mine[0]["commissions"][0]["state"] == "held"
 
 
-def test_self_referral_and_invalid_code_rejected(client, campaign, buy, auth) -> None:
+def test_own_code_and_invalid_code_rejected(client, campaign, buy, auth) -> None:
     cid = campaign["campaign"]["id"]
     alice = buy(cid, "alice")
     code = alice["backing"]["referral_code"]
     r = client.post(f"/v1/campaigns/{cid}/orders", headers=auth("alice"),
                     json={"kind": "referral", "referral_code": code})
-    assert r.status_code == 422
-    assert r.json()["error"]["code"] == "self_referral"
+    assert r.status_code == 409
+    assert r.json()["error"]["code"] == "already_purchased"
     r = client.post(f"/v1/campaigns/{cid}/orders", headers=auth("bob"),
                     json={"kind": "referral", "referral_code": "NOPE-0000"})
     assert r.status_code == 422

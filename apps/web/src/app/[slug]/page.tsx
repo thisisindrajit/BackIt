@@ -38,6 +38,11 @@ export default async function CampaignPage({ params, searchParams }: PageProps<"
               {c.product.name}
               <ArrowUpRightIcon className="size-3.5" />
             </a>
+            {c.status === "closed" ? (
+              <p className="w-fit rounded-full bg-secondary px-3 py-1 text-sm font-medium text-secondary-foreground">
+                Ended{c.ended_at ? ` ${new Date(c.ended_at).toLocaleDateString("en", { month: "short", day: "numeric" })}` : ""}
+              </p>
+            ) : null}
             <h1 className="text-5xl leading-[1.02] sm:text-6xl">{c.headline}</h1>
             <p className="max-w-prose text-xl text-pretty text-muted-foreground">{c.summary}</p>
             <p className="text-sm text-muted-foreground">

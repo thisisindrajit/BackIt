@@ -6,7 +6,7 @@ import { ExploreResults, ExploreResultsSkeleton } from "@/components/explore/exp
 
 export const metadata: Metadata = {
   title: "Explore campaigns",
-  description: "Back indie products early. Founding backers get a lifetime deal and a reward for every friend who buys.",
+  description: "Back indie products early. Founding backers get an early deal and a reward for every friend who buys.",
 };
 
 export default function ExplorePage({ searchParams }: PageProps<"/explore">) {
@@ -20,7 +20,7 @@ export default function ExplorePage({ searchParams }: PageProps<"/explore">) {
               Back something <em>early</em>.
             </h1>
             <p className="max-w-prose text-lg text-pretty text-muted-foreground">
-              Indie products raising from their first fans. Founding backers get a lifetime deal, plus a reward for every friend who buys.
+              Indie products raising from their first fans. Founding backers get an early deal, plus a reward for every friend who buys.
             </p>
           </header>
           <Suspense fallback={<ExploreResultsSkeleton />}>

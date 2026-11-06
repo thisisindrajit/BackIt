@@ -66,7 +66,7 @@ function CampaignRow({ card: c, rank }: { card: PublicCampaignCard; rank: number
           <p className="line-clamp-2 text-[0.9375rem] text-foreground/75 sm:line-clamp-1">{c.headline}</p>
           <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
             <span>
-              <span className="tabular font-medium text-foreground">{money(c.founding.price_cents)}</span> lifetime
+              <span className="tabular font-medium text-foreground">{money(c.founding.price_cents)}</span> · {c.offer.label}
             </span>
             <span className="flex items-center gap-2">
               <Progress value={((cap - left) / cap) * 100} aria-label="Founding spots taken" className="hidden w-16 gap-0 sm:flex" />

@@ -40,7 +40,16 @@ export function TrustCard({ campaign: c }: { campaign: PublicCampaign }) {
             {c.trust.seller_provider === "mock" ? <span className="text-muted-foreground"> (simulated)</span> : <span className="text-muted-foreground"> (sandbox)</span>}
           </dd>
           <dt className="text-muted-foreground">You get</dt>
-          <dd>{c.trust.access_terms}</dd>
+          <dd className="flex flex-col gap-1">
+            <span className="font-medium">{c.offer.label}</span>
+            <span>{c.trust.access_terms}</span>
+          </dd>
+          <dt className="text-muted-foreground">Access reports</dt>
+          <dd>
+            {c.trust.open_access_reports
+              ? `${c.trust.open_access_reports} open. Referral payouts are paused until the builder fixes access.`
+              : "None open. If you can’t use what you bought, report it and referral payouts pause until it’s fixed."}
+          </dd>
           <dt className="text-muted-foreground">Refunds</dt>
           <dd>{c.trust.refund_terms || "Refunds are issued by the builder through PayPal. Commissions on refunded sales are reversed."}</dd>
           <dt className="text-muted-foreground">BackIt fee</dt>

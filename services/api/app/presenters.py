@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from app.config import get_settings
 from app.ids import iso
 from app.models import (
+    AccessReport,
     Backing,
     Campaign,
     Commission,
@@ -22,14 +23,18 @@ from app.models import (
     WebhookDelivery,
 )
 from app.money import quote_referral
+from app.offer_types import offer_label
 from app.schemas import (
+    AccessReportOut,
     BackingCampaign,
     BackingOut,
     Balances,
+    BuilderAccessReportOut,
     CampaignOut,
     CommissionOut,
     Explanation,
     Funding,
+    OfferOut,
     OrderAccess,
     OrderBacking,
     OrderOut,
@@ -110,6 +115,14 @@ def verification_out(v: RevenueVerification | None) -> VerificationOut | None:
     )
 
 
+def offer_out(c: Campaign) -> OfferOut:
+    return OfferOut(
+        type=c.offer_type,  # type: ignore[arg-type]
+        value=c.offer_value,
+        label=offer_label(c.offer_type, c.offer_value),
+    )
+
+
 def campaign_out(c: Campaign) -> CampaignOut:
     return CampaignOut(
         id=c.id,
@@ -127,7 +140,9 @@ def campaign_out(c: Campaign) -> CampaignOut:
         referral_discount_bps=c.referral_discount_bps,
         commission_bps=c.commission_bps,
         platform_fee_bps=c.platform_fee_bps,
+        offer=offer_out(c),
         published_at=iso(c.published_at),
+        ended_at=iso(c.ended_at),
         updated_at=iso(c.updated_at) or "",
     )
 
@@ -191,6 +206,7 @@ def order_out(db: Session, order: Order) -> OrderOut:
         product_url=product.url,
         builder_name=owner.display_name if owner else "",
         access_terms=product.access_terms,
+        offer=offer_out(campaign),
         referral_reward_cents=reward,
         kind=order.kind,  # type: ignore[arg-type]
         state=order.state,  # type: ignore[arg-type]
@@ -271,6 +287,8 @@ def backing_out(db: Session, backing: Backing) -> BackingOut:
             product_name=product.name,
             product_url=product.url,
             builder_name=owner.display_name if owner else "Builder",
+            status=campaign.status,  # type: ignore[arg-type]
+            offer=offer_out(campaign),
         ),
         badge_number=backing.badge_number,
         referral_code=backing.referral_code,
@@ -293,7 +311,47 @@ def backing_out(db: Session, backing: Backing) -> BackingOut:
             )
             for c, paid, buyer in commissions
         ],
+        access_report=access_report_out(latest_access_report(db, backing.id)),
         created_at=iso(backing.created_at) or "",
+    )
+
+
+def latest_access_report(db: Session, backing_id: str) -> AccessReport | None:
+    return db.scalars(
+        select(AccessReport)
+        .where(AccessReport.backing_id == backing_id)
+        .order_by(AccessReport.created_at.desc(), AccessReport.id.desc())
+    ).first()
+
+
+def _report_fields(r: AccessReport) -> dict[str, object]:
+    return {
+        "id": r.id,
+        "status": r.status,
+        "message": r.message,
+        "builder_note": r.builder_note,
+        "builder_replied_at": iso(r.builder_replied_at),
+        "resolved_at": iso(r.resolved_at),
+        "created_at": iso(r.created_at) or "",
+    }
+
+
+def access_report_out(r: AccessReport | None) -> AccessReportOut | None:
+    return AccessReportOut(**_report_fields(r)) if r else None  # type: ignore[arg-type]
+
+
+def builder_access_report_out(db: Session, r: AccessReport) -> BuilderAccessReportOut:
+    backing = db.get(Backing, r.backing_id)
+    assert backing is not None
+    reporter = db.get(Profile, r.reporter_id)
+    return BuilderAccessReportOut(
+        **_report_fields(r),  # type: ignore[arg-type]
+        backing_id=backing.id,
+        order_id=backing.order_id,
+        backer_name=reporter.display_name if reporter else "Backer",
+        backer_email=reporter.email if reporter else "",
+        badge_number=backing.badge_number,
+        code_redeemed_at=iso(backing.claimed_at),
     )
 
 

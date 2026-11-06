@@ -10,9 +10,9 @@ from app.config import get_settings
 from app.deps import DBDep
 from app.errors import AppError, not_found
 from app.ids import iso, utcnow
-from app.models import Backing, Campaign, LedgerEntry, Order, Product, Profile
+from app.models import AccessReport, Backing, Campaign, LedgerEntry, Order, Product, Profile
 from app.money import quote_referral
-from app.presenters import latest_verification, seller_connection, verification_out
+from app.presenters import latest_verification, offer_out, seller_connection, verification_out
 from app.schemas import (
     LedgerItem,
     LedgerPage,
@@ -33,7 +33,8 @@ PAGE_SIZE = 20
 
 def _published(db: DBDep, slug: str) -> Campaign:
     campaign = db.scalars(select(Campaign).where(Campaign.slug == slug.lower())).first()
-    if campaign is None or campaign.status != "published":
+    # Ended campaigns stay viewable so backers can still read the story and the ledger.
+    if campaign is None or campaign.status not in ("published", "closed"):
         raise not_found("Campaign")
     return campaign
 
@@ -70,6 +71,7 @@ def list_public_campaigns(
             summary=campaign.summary,
             product=PublicProduct(name=product.name, url=product.url),
             builder_name=builder_name or "Builder",
+            offer=offer_out(campaign),
             founding=PublicFounding(
                 price_cents=campaign.founding_price_cents,
                 spots_cap=campaign.founding_spots_cap,
@@ -113,6 +115,8 @@ def get_public_campaign(
         summary=campaign.summary,
         story=campaign.story,
         status=campaign.status,  # type: ignore[arg-type]
+        offer=offer_out(campaign),
+        ended_at=iso(campaign.ended_at),
         product=PublicProduct(name=product.name, url=product.url),
         builder_name=owner.display_name if owner else "Builder",
         founding=PublicFounding(
@@ -138,6 +142,8 @@ def get_public_campaign(
             refund_terms=product.refund_terms,
             hold_days=settings.hold_days,
             payout_minimum_cents=settings.payout_minimum_cents,
+            open_access_reports=db.scalar(select(func.count(AccessReport.id)).where(
+                AccessReport.campaign_id == campaign.id, AccessReport.status == "open")) or 0,
         ),
         stats=PublicStats(backers=int(backers), sales=int(sales)),
         referrer=referrer,

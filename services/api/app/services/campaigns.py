@@ -8,8 +8,9 @@ from sqlalchemy.orm import Session
 from app.config import get_settings
 from app.errors import AppError
 from app.ids import new_id, utcnow
-from app.models import Campaign, Product, Profile
+from app.models import Campaign, Order, Product, Profile
 from app.money import format_usd, offer_problems, quote_referral
+from app.offer_types import offer_value_problem
 from app.presenters import latest_verification, seller_connection
 from app.providers import ai
 from app.schemas import (
@@ -24,7 +25,7 @@ from app.schemas import (
     ReadinessCheck,
 )
 from app.services.common import audit, campaign_for_product, conflict
-from app.services.notifications import notify_campaign_live
+from app.services.notifications import notify_campaign_ended, notify_campaign_live
 
 PRICE_FIELDS = (
     "founding_price_cents",
@@ -33,6 +34,8 @@ PRICE_FIELDS = (
     "referral_discount_bps",
     "commission_bps",
 )
+
+OFFER_FIELDS = ("offer_type", "offer_value")
 
 DEFAULT_OFFER = {
     "founding_price_cents": 9900,
@@ -214,6 +217,13 @@ def validate_new_campaign(db: Session, body: CampaignFields) -> None:
     if _slug_taken(db, body.slug):
         raise conflict("slug_taken", "That campaign slug is already taken")
     _check_offer(body.model_dump())
+    _check_reward(body.offer_type, body.offer_value)
+
+
+def _check_reward(offer_type: str, offer_value: int | None) -> None:
+    problem = offer_value_problem(offer_type, offer_value)
+    if problem:
+        raise AppError(422, "invalid_offer", problem, {"problems": [problem]})
 
 
 def add_campaign(db: Session, user: Profile, product: Product, body: CampaignFields) -> Campaign:
@@ -234,6 +244,8 @@ def add_campaign(db: Session, user: Profile, product: Product, body: CampaignFie
         referral_list_price_cents=body.referral_list_price_cents,
         referral_discount_bps=body.referral_discount_bps,
         commission_bps=body.commission_bps,
+        offer_type=body.offer_type,
+        offer_value=body.offer_value,
         platform_fee_bps=get_settings().platform_fee_bps,
     )
     db.add(campaign)
@@ -257,18 +269,23 @@ def create_campaign(db: Session, user: Profile, product: Product, body: Campaign
 def update_campaign(db: Session, user: Profile, campaign: Campaign, body: CampaignUpdate) -> Campaign:
     data = {k: v for k, v in body.model_dump(exclude_unset=True).items()}
     for key, value in data.items():
-        if value is None:
+        if value is None and key != "offer_value":
             raise AppError(422, "validation_error", f"{key} cannot be null")
+    if "offer_type" in data and "offer_value" not in data and data["offer_type"] != campaign.offer_type:
+        data["offer_value"] = None
     if campaign.status != "draft":
-        locked = [f for f in (*PRICE_FIELDS, "slug") if f in data and data[f] != getattr(campaign, f)]
+        locked = [f for f in (*PRICE_FIELDS, *OFFER_FIELDS, "slug")
+                  if f in data and data[f] != getattr(campaign, f)]
         if locked:
             raise conflict("campaign_locked",
-                           "Prices, spots and slug can only be edited while the campaign is a draft",
+                           "Prices, the offer, spots and slug can only be edited while the campaign is a draft",
                            {"fields": locked})
     if "slug" in data and data["slug"] != campaign.slug and _slug_taken(db, data["slug"], campaign.id):
         raise conflict("slug_taken", "That campaign slug is already taken")
     merged = {f: data.get(f, getattr(campaign, f)) for f in PRICE_FIELDS}
     _check_offer(merged)
+    _check_reward(data.get("offer_type", campaign.offer_type),
+                  data.get("offer_value", campaign.offer_value))
     if merged["founding_spots_cap"] < campaign.founding_spots_taken:
         raise AppError(422, "invalid_offer", "Spots cap cannot be below spots already taken")
     for key, value in data.items():
@@ -339,5 +356,29 @@ def publish(db: Session, user: Profile, campaign: Campaign, product: Product) ->
     notify_campaign_live(db, campaign=campaign, product=product, owner=user)
     audit(db, actor_id=user.id, action="campaign.published", target_type="campaign",
           target_id=campaign.id, details={"version": campaign.version})
+    db.commit()
+    return campaign
+
+
+def end_campaign(db: Session, user: Profile, campaign: Campaign, product: Product) -> Campaign:
+    """Stop new sales for good. Backings, codes and earned rewards are untouched."""
+    if campaign.status == "closed":
+        return campaign
+    if campaign.status != "published":
+        raise conflict("campaign_not_live", "Only a live campaign can be ended")
+    now = utcnow()
+    open_orders = db.scalars(
+        select(Order).where(Order.campaign_id == campaign.id, Order.state == "created").with_for_update()
+    ).all()
+    for order in open_orders:
+        order.state = "cancelled"
+        order.failure_reason = "campaign_ended"
+        order.reservation_expires_at = None
+    campaign.status = "closed"
+    campaign.ended_at = now
+    campaign.version += 1
+    notify_campaign_ended(db, campaign=campaign, product=product, owner=user)
+    audit(db, actor_id=user.id, action="campaign.ended", target_type="campaign", target_id=campaign.id,
+          details={"version": campaign.version, "canceled_orders": len(open_orders)})
     db.commit()
     return campaign

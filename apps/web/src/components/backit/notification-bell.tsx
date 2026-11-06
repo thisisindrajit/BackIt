@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { BellIcon, HandCoinsIcon, RocketIcon, ShoppingBagIcon } from "lucide-react";
+import { BellIcon, FlagIcon, FlagOffIcon, HandCoinsIcon, MessageSquareReplyIcon, RocketIcon, ShoppingBagIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { apiKey, apiQuery, authedApi } from "@/hooks/use-api";
@@ -16,6 +16,9 @@ const icons: Record<Notification["kind"], typeof BellIcon> = {
   sale: ShoppingBagIcon,
   referral_sale: HandCoinsIcon,
   campaign_live: RocketIcon,
+  campaign_ended: FlagOffIcon,
+  access_report: FlagIcon,
+  access_report_reply: MessageSquareReplyIcon,
 };
 
 const rtf = new Intl.RelativeTimeFormat("en", { numeric: "auto", style: "short" });

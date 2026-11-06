@@ -134,6 +134,10 @@ class Campaign(TimestampMixin, Base):
     __table_args__ = (
         CheckConstraint(_in("status", ("draft", "published", "closed")), name="status"),
         CheckConstraint(
+            _in("offer_type", ("lifetime", "access_period", "discount", "voucher", "custom")),
+            name="offer_type",
+        ),
+        CheckConstraint(
             "founding_price_cents BETWEEN 100 AND 1000000", name="founding_price_range"
         ),
         CheckConstraint(
@@ -165,7 +169,11 @@ class Campaign(TimestampMixin, Base):
     referral_discount_bps: Mapped[int] = mapped_column(Integer)
     commission_bps: Mapped[int] = mapped_column(Integer)
     platform_fee_bps: Mapped[int] = mapped_column(Integer)
+    # What every purchase unlocks; prices above say what it costs.
+    offer_type: Mapped[str] = mapped_column(String(20), default="lifetime", server_default="lifetime")
+    offer_value: Mapped[int | None] = mapped_column(Integer)
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class Order(TimestampMixin, Base):
@@ -615,12 +623,17 @@ class IdempotencyKey(Base):
     )
 
 
+NOTIFICATION_KINDS = (
+    "sale", "referral_sale", "campaign_live", "campaign_ended", "access_report", "access_report_reply",
+)
+
+
 class Notification(TimestampMixin, Base):
     """In-app notice for one user, plus an optional email sent through Resend (outbox style)."""
 
     __tablename__ = "notifications"
     __table_args__ = (
-        CheckConstraint(_in("kind", ("sale", "referral_sale", "campaign_live")), name="kind"),
+        CheckConstraint(_in("kind", NOTIFICATION_KINDS), name="kind"),
         CheckConstraint(
             _in("email_state", ("none", "pending", "sent", "failed", "dead", "skipped")),
             name="email_state",
@@ -647,3 +660,29 @@ class Notification(TimestampMixin, Base):
     email_last_error: Mapped[str | None] = mapped_column(Text)
     email_message_id: Mapped[str | None] = mapped_column(String(128))
     email_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class AccessReport(TimestampMixin, Base):
+    """A backer says they can't get what they paid for. While any is open, payouts are halted."""
+
+    __tablename__ = "access_reports"
+    __table_args__ = (
+        CheckConstraint(_in("status", ("open", "resolved", "refunded")), name="status"),
+        Index(
+            "uq_access_reports_open_backing",
+            "backing_id",
+            unique=True,
+            postgresql_where=text("status = 'open'"),
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True)
+    campaign_id: Mapped[str] = mapped_column(_fk("campaigns.id"), index=True)
+    product_id: Mapped[str] = mapped_column(_fk("products.id"), index=True)
+    backing_id: Mapped[str] = mapped_column(_fk("backings.id"), index=True)
+    reporter_id: Mapped[str] = mapped_column(_fk("profiles.id"))
+    status: Mapped[str] = mapped_column(String(16), default="open")
+    message: Mapped[str] = mapped_column(Text)
+    builder_note: Mapped[str | None] = mapped_column(Text)
+    builder_replied_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

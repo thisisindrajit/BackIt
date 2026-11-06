@@ -18,6 +18,7 @@ import { RoleInfo } from "@/components/backit/role-info";
 import { StatusBadge } from "@/components/backit/status-badge";
 import { CopyField } from "@/components/builder/secret-reveal";
 import { AccessCode } from "@/components/backer/access-code";
+import { AccessReportPanel } from "@/components/backer/access-report";
 import { authedApi } from "@/hooks/use-api";
 import { useAction } from "@/hooks/use-action";
 import { money, shortDate } from "@/lib/format";
@@ -65,7 +66,8 @@ export function BackingCard({ backing: b }: { backing: Backing }) {
             {b.campaign.headline}
           </Link>
           <span className="mt-1 block text-xs">
-            by {b.campaign.builder_name} · Backed {shortDate(b.created_at)}
+            {b.campaign.offer.label} · by {b.campaign.builder_name} · Backed {shortDate(b.created_at)}
+            {b.campaign.status === "closed" ? " · Campaign ended" : ""}
           </span>
         </CardDescription>
         <CardAction>
@@ -90,6 +92,9 @@ export function BackingCard({ backing: b }: { backing: Backing }) {
           claimedAt={b.claimed_at}
           revoked={b.status === "revoked"}
         />
+        {b.status !== "revoked" ? (
+          <AccessReportPanel backingId={b.id} productName={b.campaign.product_name} report={b.access_report ?? null} />
+        ) : null}
         <div className="flex flex-col gap-2">
           <p className="text-sm font-medium">Your referral link</p>
           <CopyField value={b.share_url} label="Referral link" />

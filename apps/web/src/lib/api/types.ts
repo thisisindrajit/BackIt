@@ -28,3 +28,7 @@ export type RiskAssessment = S["RiskAssessmentOut"];
 export type OfferSuggestion = S["OfferSuggestion"];
 export type Notification = S["NotificationOut"];
 export type NotificationList = S["NotificationList"];
+export type Offer = S["OfferOut"];
+export type OfferType = Offer["type"];
+export type AccessReport = S["AccessReportOut"];
+export type BuilderAccessReport = S["BuilderAccessReportOut"];

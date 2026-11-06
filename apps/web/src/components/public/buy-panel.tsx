@@ -1,7 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useRef } from "react";
+import { useRef, useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { FoundingSeal } from "@/components/backit/founding-seal";
 import { Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +11,7 @@ import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner";
 import { authedApi } from "@/hooks/use-api";
-import { useAction } from "@/hooks/use-action";
+import { ApiError, errorMessage } from "@/lib/api/client";
 import { money, percent } from "@/lib/format";
 import type { Order, PublicCampaign } from "@/lib/api/types";
 
@@ -17,10 +19,12 @@ type Kind = "founding" | "referral";
 
 export function BuyPanel({ campaign: c, referralCode, signedIn }: { campaign: PublicCampaign; referralCode?: string; signedIn: boolean }) {
   const router = useRouter();
-  const { pending, run } = useAction();
+  const [pending, setPending] = useState<Kind | null>(null);
+  const [owned, setOwned] = useState(false);
   const idempotencyKeys = useRef(new Map<string, string>());
   const soldOut = c.founding.spots_left <= 0;
-  const closed = c.status !== "published";
+  const ended = c.status === "closed";
+  const closed = c.status !== "published" || owned;
 
   async function buy(kind: Kind) {
     const here = `/${c.slug}${referralCode ? `?ref=${encodeURIComponent(referralCode)}` : ""}`;
@@ -34,14 +38,19 @@ export function BuyPanel({ campaign: c, referralCode, signedIn }: { campaign: Pu
       key = crypto.randomUUID();
       idempotencyKeys.current.set(purchase, key);
     }
-    const order = await run(kind, () =>
-      authedApi<Order>(`/campaigns/${c.id}/orders`, {
+    setPending(kind);
+    try {
+      const order = await authedApi<Order>(`/campaigns/${c.id}/orders`, {
         method: "POST",
         body: kind === "referral" ? { kind, referral_code: referralCode } : { kind },
         idempotencyKey: key,
-      }),
-    );
-    if (order) router.push(`/checkout/${order.id}`);
+      });
+      router.push(`/checkout/${order.id}`);
+    } catch (e) {
+      if (e instanceof ApiError && e.code === "already_purchased") setOwned(true);
+      else toast.error(errorMessage(e));
+      setPending(null);
+    }
   }
 
   const referral = referralCode ? (
@@ -74,9 +83,9 @@ export function BuyPanel({ campaign: c, referralCode, signedIn }: { campaign: Pu
       <CardHeader>
         <CardTitle className="text-xl">Founding backer</CardTitle>
         <CardDescription>
-          Pre-buy {c.product.name}, get a numbered badge, and earn {money(c.referral.commission_cents)} for each friend who buys with your link.
+          {c.offer.label} of {c.product.name}, a numbered badge, and earn {money(c.referral.commission_cents)} for each friend who buys with your link.
         </CardDescription>
-        {!soldOut ? (
+        {!soldOut && !ended ? (
           <CardAction>
             <FoundingSeal number={c.founding.spots_taken + 1} size={68} className="transition-transform duration-300 ease-(--ease-out) hover:rotate-12" />
           </CardAction>
@@ -85,19 +94,23 @@ export function BuyPanel({ campaign: c, referralCode, signedIn }: { campaign: Pu
       <CardContent className="flex flex-col gap-4">
         <p className="flex items-baseline gap-2">
           <span className="tabular font-heading text-5xl">{money(c.founding.price_cents)}</span>
-          {!soldOut ? <span className="tabular text-sm text-muted-foreground">badge No. {c.founding.spots_taken + 1} is next</span> : null}
+          {!soldOut && !ended ? <span className="tabular text-sm text-muted-foreground">badge No. {c.founding.spots_taken + 1} is next</span> : null}
         </p>
         <div className="flex flex-col gap-2">
           <Progress value={(c.founding.spots_taken / Math.max(c.founding.spots_cap, 1)) * 100} aria-label="Founding spots taken" />
           <p className="tabular text-sm text-muted-foreground">
-            {soldOut ? "All founding spots are taken" : `${c.founding.spots_left} of ${c.founding.spots_cap} spots left`}
+            {ended
+              ? `Ended with ${c.founding.spots_taken} of ${c.founding.spots_cap} spots taken`
+              : soldOut
+                ? "All founding spots are taken"
+                : `${c.founding.spots_left} of ${c.founding.spots_cap} spots left`}
           </p>
         </div>
       </CardContent>
       <CardFooter>
         <Button className="w-full" size="lg" variant={referralCode ? "outline" : "default"} disabled={closed || soldOut || pending !== null} onClick={() => buy("founding")}>
           {pending === "founding" ? <Spinner data-icon="inline-start" /> : null}
-          {soldOut ? "Sold out" : "Become a founding backer"}
+          {ended ? "Campaign ended" : soldOut ? "Sold out" : "Become a founding backer"}
         </Button>
       </CardFooter>
     </Card>
@@ -105,11 +118,19 @@ export function BuyPanel({ campaign: c, referralCode, signedIn }: { campaign: Pu
 
   return (
     <div className="flex flex-col gap-4">
+      {owned ? (
+        <p className="rounded-2xl bg-accent px-4 py-3 text-sm text-accent-foreground">
+          You already backed {c.product.name}.{" "}
+          <Link href="/app/backings" className="underline underline-offset-4">
+            See your backing
+          </Link>
+        </p>
+      ) : null}
       {referral}
       {referral ? <Separator /> : null}
       {founding}
       <p className="text-xs text-muted-foreground">
-        {closed ? "This campaign is closed." : "Checkout runs in PayPal sandbox. No real money moves."}
+        {ended ? "This campaign has ended. Backers keep their access." : owned ? "One purchase per backer." : closed ? "This campaign is closed." : "Checkout runs in PayPal sandbox. No real money moves."}
         {!signedIn && !closed ? " You'll create a free account first." : null}
       </p>
     </div>

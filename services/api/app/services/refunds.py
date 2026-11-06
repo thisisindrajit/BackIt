@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.errors import AppError, forbidden, not_found
 from app.ids import new_id, utcnow
 from app.models import (
+    AccessReport,
     Backing,
     Campaign,
     Commission,
@@ -115,6 +116,12 @@ def apply_refund(db: Session, order: Order, *, refund_provider_id: str | None, s
 
     order.state = "refunded"
     order.refunded_at = now
+    if order.backing_id:
+        db.execute(
+            update(AccessReport)
+            .where(AccessReport.backing_id == order.backing_id, AccessReport.status == "open")
+            .values(status="refunded", resolved_at=now)
+        )
     append_ledger(db, campaign_id=campaign.id, entry_type="refund",
                   amount_cents=order.amount_cents, source_key=f"order:{order.id}:refund",
                   public_ref=public_ref("order", order.id), order_id=order.id,

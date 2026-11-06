@@ -19,6 +19,7 @@ import {
   fromCents,
   MoneyField,
   OfferAdvisor,
+  OfferPicker,
   PercentField,
   ReferralExample,
   STORY_MAX,
@@ -46,6 +47,8 @@ const initialCampaign: Values = {
   referral_list_price: "149",
   referral_discount: "20",
   commission: "25",
+  offer_type: "lifetime",
+  offer_value: "",
 };
 
 function slugify(name: string) {
@@ -184,7 +187,7 @@ export default function NewCampaignPage() {
           <FieldGroup className="grid gap-6 xl:grid-cols-2">
             <Field>
               <FieldLabel htmlFor="access_terms">Access</FieldLabel>
-              <Textarea id="access_terms" required maxLength={2000} rows={3} placeholder="Lifetime access to the Pro plan, including future updates." value={product.access_terms} onChange={setP("access_terms")} />
+              <Textarea id="access_terms" required maxLength={2000} rows={3} placeholder="The Pro plan, including future updates. For a coupon, say what it applies to." value={product.access_terms} onChange={setP("access_terms")} />
             </Field>
             <Field>
               <FieldLabel htmlFor="refund_terms">Refund terms</FieldLabel>
@@ -221,6 +224,7 @@ export default function NewCampaignPage() {
               Add your product name and what it does, and the offer advisor can suggest prices, spots and commission.
             </p>
           )}
+          <OfferPicker type={values.offer_type} value={values.offer_value} onChange={(o) => setValues((v) => ({ ...v, ...o }))} />
           <div className="grid gap-3 sm:grid-cols-2">
             <MoneyField id="founding_price" label="Founding price" value={values.founding_price} onChange={setV("founding_price")} />
             <Field>

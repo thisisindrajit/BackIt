@@ -43,6 +43,13 @@ def publish_campaign(campaign_id: str, user: CurrentUserDep, db: DBDep) -> Campa
     return campaign_out(campaign_service.publish(db, user, campaign, product))
 
 
+@router.post("/{campaign_id}/end")
+def end_campaign(campaign_id: str, user: CurrentUserDep, db: DBDep) -> CampaignOut:
+    """Close a live campaign to new purchases. Existing backers keep access and earned rewards."""
+    campaign, product = owned_campaign(db, campaign_id, user, lock=True)
+    return campaign_out(campaign_service.end_campaign(db, user, campaign, product))
+
+
 @router.post("/{campaign_id}/orders", status_code=status.HTTP_201_CREATED)
 def create_order(
     campaign_id: str,

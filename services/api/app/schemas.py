@@ -29,6 +29,16 @@ Slug = Annotated[str, AfterValidator(_check_slug)]
 PriceCents = Annotated[int, Field(ge=100, le=1_000_000)]
 RateBps = Annotated[int, Field(ge=0, le=5000)]
 Spots = Annotated[int, Field(ge=1, le=10_000)]
+OfferType = Literal["lifetime", "access_period", "discount", "voucher", "custom"]
+OfferValue = Annotated[int, Field(ge=1, le=1_000_000)]
+
+
+class OfferOut(BaseModel):
+    """What a purchase unlocks. value is months, percent off or voucher cents, depending on type."""
+
+    type: OfferType
+    value: int | None
+    label: str
 
 
 class StrictModel(BaseModel):
@@ -164,7 +174,9 @@ class CampaignOut(BaseModel):
     referral_discount_bps: int
     commission_bps: int
     platform_fee_bps: int
+    offer: OfferOut
     published_at: str | None
+    ended_at: str | None
     updated_at: str
 
 
@@ -320,6 +332,8 @@ class CampaignFields(StrictModel):
     referral_list_price_cents: PriceCents
     referral_discount_bps: RateBps
     commission_bps: RateBps
+    offer_type: OfferType = "lifetime"
+    offer_value: OfferValue | None = None
 
 
 class CampaignCreate(CampaignFields):
@@ -336,6 +350,8 @@ class CampaignUpdate(StrictModel):
     referral_list_price_cents: PriceCents | None = None
     referral_discount_bps: RateBps | None = None
     commission_bps: RateBps | None = None
+    offer_type: OfferType | None = None
+    offer_value: OfferValue | None = None
 
 
 class ReadinessCheck(BaseModel):
@@ -381,6 +397,7 @@ class PublicTrust(BaseModel):
     refund_terms: str
     hold_days: int
     payout_minimum_cents: int
+    open_access_reports: int
 
 
 class PublicStats(BaseModel):
@@ -400,6 +417,8 @@ class PublicCampaign(BaseModel):
     summary: str
     story: str
     status: Literal["draft", "published", "closed"]
+    offer: OfferOut
+    ended_at: str | None
     product: PublicProduct
     builder_name: str
     founding: PublicFounding
@@ -416,6 +435,7 @@ class PublicCampaignCard(BaseModel):
     summary: str
     product: PublicProduct
     builder_name: str
+    offer: OfferOut
     founding: PublicFounding
     referral_price_cents: int
     commission_cents: int
@@ -478,6 +498,7 @@ class OrderOut(BaseModel):
     product_url: str
     builder_name: str
     access_terms: str
+    offer: OfferOut
     referral_reward_cents: int
     kind: Literal["founding", "referral"]
     state: OrderState
@@ -506,6 +527,8 @@ class BackingCampaign(BaseModel):
     product_name: str
     product_url: str
     builder_name: str
+    status: Literal["draft", "published", "closed"]
+    offer: OfferOut
 
 
 class Balances(BaseModel):
@@ -543,7 +566,38 @@ class BackingOut(BaseModel):
     claimed_at: str | None
     balances: Balances
     commissions: list[CommissionOut]
+    access_report: "AccessReportOut | None"
     created_at: str
+
+
+# ---------- Access reports ----------
+
+
+class AccessReportIn(StrictModel):
+    message: Annotated[str, Field(min_length=10, max_length=2000)]
+
+
+class AccessReplyIn(StrictModel):
+    note: Annotated[str, Field(min_length=2, max_length=2000)]
+
+
+class AccessReportOut(BaseModel):
+    id: str
+    status: Literal["open", "resolved", "refunded"]
+    message: str
+    builder_note: str | None
+    builder_replied_at: str | None
+    resolved_at: str | None
+    created_at: str
+
+
+class BuilderAccessReportOut(AccessReportOut):
+    backing_id: str
+    order_id: str
+    backer_name: str
+    backer_email: str
+    badge_number: int | None
+    code_redeemed_at: str | None
 
 
 class ShareDraftIn(StrictModel):
@@ -574,6 +628,7 @@ class ClaimRedeemOut(BaseModel):
     status: Literal["redeemed", "already_redeemed"]
     order_id: str
     plan_id: Literal["founding", "referral"]
+    offer: OfferOut
     badge_number: int | None
     buyer_email: str
     user_ref: str
@@ -653,7 +708,7 @@ class PreviewItem(BaseModel):
 
 
 ExclusionReason = Literal[
-    "below_minimum", "in_hold", "no_payout_email", "risk_review", "refund_pending"
+    "below_minimum", "in_hold", "no_payout_email", "risk_review", "refund_pending", "access_report"
 ]
 
 
@@ -736,11 +791,14 @@ class AckOut(BaseModel):
 
 
 ProductCreate.model_rebuild()
+BackingOut.model_rebuild()
 
 
 class NotificationOut(BaseModel):
     id: str
-    kind: Literal["sale", "referral_sale", "campaign_live"]
+    kind: Literal[
+        "sale", "referral_sale", "campaign_live", "campaign_ended", "access_report", "access_report_reply"
+    ]
     title: str
     body: str
     link: str | None

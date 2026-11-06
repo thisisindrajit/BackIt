@@ -379,6 +379,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/campaigns/{campaign_id}/end": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * End Campaign
+         * @description Close a live campaign to new purchases. Existing backers keep access and earned rewards.
+         */
+        post: operations["end_campaign_v1_campaigns__campaign_id__end_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/campaigns/{campaign_id}/orders": {
         parameters: {
             query?: never;
@@ -532,6 +552,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/backings/{backing_id}/access-report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Report Access
+         * @description Tell the builder the offer isn't working. Reward payouts pause until it's resolved or refunded.
+         */
+        post: operations["report_access_v1_backings__backing_id__access_report_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/backings/{backing_id}/access-report/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resolve Access Report */
+        post: operations["resolve_access_report_v1_backings__backing_id__access_report_resolve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/products/{product_id}/sales": {
         parameters: {
             query?: never;
@@ -611,6 +668,40 @@ export interface paths {
         put?: never;
         /** Decide Risk Flag */
         post: operations["decide_risk_flag_v1_risk_flags__flag_id__decision_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/products/{product_id}/access-reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Access Reports */
+        get: operations["list_access_reports_v1_products__product_id__access_reports_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/access-reports/{report_id}/reply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reply Access Report */
+        post: operations["reply_access_report_v1_access_reports__report_id__reply_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -782,6 +873,36 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AccessReplyIn */
+        AccessReplyIn: {
+            /** Note */
+            note: string;
+        };
+        /** AccessReportIn */
+        AccessReportIn: {
+            /** Message */
+            message: string;
+        };
+        /** AccessReportOut */
+        AccessReportOut: {
+            /** Id */
+            id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "open" | "resolved" | "refunded";
+            /** Message */
+            message: string;
+            /** Builder Note */
+            builder_note: string | null;
+            /** Builder Replied At */
+            builder_replied_at: string | null;
+            /** Resolved At */
+            resolved_at: string | null;
+            /** Created At */
+            created_at: string;
+        };
         /** AckOut */
         AckOut: {
             /** Received */
@@ -834,6 +955,12 @@ export interface components {
             product_url: string;
             /** Builder Name */
             builder_name: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "draft" | "published" | "closed";
+            offer: components["schemas"]["OfferOut"];
         };
         /** BackingOut */
         BackingOut: {
@@ -863,6 +990,7 @@ export interface components {
             balances: components["schemas"]["Balances"];
             /** Commissions */
             commissions: components["schemas"]["CommissionOut"][];
+            access_report: components["schemas"]["AccessReportOut"] | null;
             /** Created At */
             created_at: string;
         };
@@ -905,6 +1033,38 @@ export interface components {
             /** Reversed Cents */
             reversed_cents: number;
         };
+        /** BuilderAccessReportOut */
+        BuilderAccessReportOut: {
+            /** Id */
+            id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "open" | "resolved" | "refunded";
+            /** Message */
+            message: string;
+            /** Builder Note */
+            builder_note: string | null;
+            /** Builder Replied At */
+            builder_replied_at: string | null;
+            /** Resolved At */
+            resolved_at: string | null;
+            /** Created At */
+            created_at: string;
+            /** Backing Id */
+            backing_id: string;
+            /** Order Id */
+            order_id: string;
+            /** Backer Name */
+            backer_name: string;
+            /** Backer Email */
+            backer_email: string;
+            /** Badge Number */
+            badge_number: number | null;
+            /** Code Redeemed At */
+            code_redeemed_at: string | null;
+        };
         /** CampaignCreate */
         CampaignCreate: {
             /** Slug */
@@ -925,6 +1085,14 @@ export interface components {
             referral_discount_bps: number;
             /** Commission Bps */
             commission_bps: number;
+            /**
+             * Offer Type
+             * @default lifetime
+             * @enum {string}
+             */
+            offer_type: "lifetime" | "access_period" | "discount" | "voucher" | "custom";
+            /** Offer Value */
+            offer_value?: number | null;
             /** Product Id */
             product_id: string;
         };
@@ -983,6 +1151,14 @@ export interface components {
             referral_discount_bps: number;
             /** Commission Bps */
             commission_bps: number;
+            /**
+             * Offer Type
+             * @default lifetime
+             * @enum {string}
+             */
+            offer_type: "lifetime" | "access_period" | "discount" | "voucher" | "custom";
+            /** Offer Value */
+            offer_value?: number | null;
         };
         /** CampaignOut */
         CampaignOut: {
@@ -1019,8 +1195,11 @@ export interface components {
             commission_bps: number;
             /** Platform Fee Bps */
             platform_fee_bps: number;
+            offer: components["schemas"]["OfferOut"];
             /** Published At */
             published_at: string | null;
+            /** Ended At */
+            ended_at: string | null;
             /** Updated At */
             updated_at: string;
         };
@@ -1068,6 +1247,10 @@ export interface components {
             referral_discount_bps?: number | null;
             /** Commission Bps */
             commission_bps?: number | null;
+            /** Offer Type */
+            offer_type?: ("lifetime" | "access_period" | "discount" | "voucher" | "custom") | null;
+            /** Offer Value */
+            offer_value?: number | null;
         };
         /** ClaimRedeemIn */
         ClaimRedeemIn: {
@@ -1092,6 +1275,7 @@ export interface components {
              * @enum {string}
              */
             plan_id: "founding" | "referral";
+            offer: components["schemas"]["OfferOut"];
             /** Badge Number */
             badge_number: number | null;
             /** Buyer Email */
@@ -1236,7 +1420,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "sale" | "referral_sale" | "campaign_live";
+            kind: "sale" | "referral_sale" | "campaign_live" | "campaign_ended" | "access_report" | "access_report_reply";
             /** Title */
             title: string;
             /** Body */
@@ -1247,6 +1431,21 @@ export interface components {
             read: boolean;
             /** Created At */
             created_at: string;
+        };
+        /**
+         * OfferOut
+         * @description What a purchase unlocks. value is months, percent off or voucher cents, depending on type.
+         */
+        OfferOut: {
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "lifetime" | "access_period" | "discount" | "voucher" | "custom";
+            /** Value */
+            value: number | null;
+            /** Label */
+            label: string;
         };
         /** OfferProjection */
         OfferProjection: {
@@ -1379,6 +1578,7 @@ export interface components {
             builder_name: string;
             /** Access Terms */
             access_terms: string;
+            offer: components["schemas"]["OfferOut"];
             /** Referral Reward Cents */
             referral_reward_cents: number;
             /**
@@ -1508,7 +1708,7 @@ export interface components {
              * Reason
              * @enum {string}
              */
-            reason: "below_minimum" | "in_hold" | "no_payout_email" | "risk_review" | "refund_pending";
+            reason: "below_minimum" | "in_hold" | "no_payout_email" | "risk_review" | "refund_pending" | "access_report";
         };
         /** PreviewItem */
         PreviewItem: {
@@ -1682,6 +1882,9 @@ export interface components {
              * @enum {string}
              */
             status: "draft" | "published" | "closed";
+            offer: components["schemas"]["OfferOut"];
+            /** Ended At */
+            ended_at: string | null;
             product: components["schemas"]["PublicProduct"];
             /** Builder Name */
             builder_name: string;
@@ -1704,6 +1907,7 @@ export interface components {
             product: components["schemas"]["PublicProduct"];
             /** Builder Name */
             builder_name: string;
+            offer: components["schemas"]["OfferOut"];
             founding: components["schemas"]["PublicFounding"];
             /** Referral Price Cents */
             referral_price_cents: number;
@@ -1804,6 +2008,8 @@ export interface components {
             hold_days: number;
             /** Payout Minimum Cents */
             payout_minimum_cents: number;
+            /** Open Access Reports */
+            open_access_reports: number;
         };
         /** Readiness */
         Readiness: {
@@ -2773,6 +2979,37 @@ export interface operations {
             };
         };
     };
+    end_campaign_v1_campaigns__campaign_id__end_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                campaign_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     create_order_v1_campaigns__campaign_id__orders_post: {
         parameters: {
             query?: never;
@@ -3092,6 +3329,72 @@ export interface operations {
             };
         };
     };
+    report_access_v1_backings__backing_id__access_report_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                backing_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccessReportIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessReportOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resolve_access_report_v1_backings__backing_id__access_report_resolve_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                backing_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessReportOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_sales_v1_products__product_id__sales_get: {
         parameters: {
             query?: never;
@@ -3238,6 +3541,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RiskFlagOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_access_reports_v1_products__product_id__access_reports_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                product_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BuilderAccessReportOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reply_access_report_v1_access_reports__report_id__reply_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                report_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccessReplyIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BuilderAccessReportOut"];
                 };
             };
             /** @description Validation Error */

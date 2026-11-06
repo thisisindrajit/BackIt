@@ -5,9 +5,19 @@ from app.deps import CurrentUserDep, DBDep
 from app.errors import forbidden, not_found
 from app.ids import iso, utcnow
 from app.models import Backing, Commission, Order, Product, Profile, RiskFlag, WebhookDelivery
-from app.presenters import delivery_out, risk_out
-from app.schemas import FlagDecisionIn, RiskFlagOut, SalesOrder, SalesSummary, SalesTotals, WebhookDeliveryOut
+from app.presenters import builder_access_report_out, delivery_out, risk_out
+from app.schemas import (
+    AccessReplyIn,
+    BuilderAccessReportOut,
+    FlagDecisionIn,
+    RiskFlagOut,
+    SalesOrder,
+    SalesSummary,
+    SalesTotals,
+    WebhookDeliveryOut,
+)
 from app.security import mask_email
+from app.services import access_reports
 from app.services import risk as risk_service
 from app.services.common import audit, campaign_for_product, owned_product
 from app.services.deliveries import deliver_now
@@ -112,3 +122,14 @@ def list_risk_flags(product_id: str, user: CurrentUserDep, db: DBDep) -> list[Ri
 @router.post("/risk-flags/{flag_id}/decision")
 def decide_risk_flag(flag_id: str, body: FlagDecisionIn, user: CurrentUserDep, db: DBDep) -> RiskFlagOut:
     return risk_out(risk_service.decide_flag(db, user, flag_id, body.decision))
+
+
+@router.get("/products/{product_id}/access-reports")
+def list_access_reports(product_id: str, user: CurrentUserDep, db: DBDep) -> list[BuilderAccessReportOut]:
+    product = owned_product(db, product_id, user)
+    return [builder_access_report_out(db, r) for r in access_reports.builder_reports(db, product)]
+
+
+@router.post("/access-reports/{report_id}/reply")
+def reply_access_report(report_id: str, body: AccessReplyIn, user: CurrentUserDep, db: DBDep) -> BuilderAccessReportOut:
+    return builder_access_report_out(db, access_reports.reply(db, user, report_id, body.note))

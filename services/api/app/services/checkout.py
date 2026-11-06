@@ -12,6 +12,7 @@ from app.errors import AppError, forbidden, not_found
 from app.ids import new_id, utcnow
 from app.models import Backing, Campaign, Commission, Order, Product, Profile
 from app.money import quote_founding, quote_referral
+from app.offer_types import offer_label
 from app.presenters import seller_connection
 from app.providers.paypal import CaptureResult, PayPalProvider, ProviderError
 from app.schemas import OrderCreate
@@ -72,6 +73,17 @@ def _founding_backing(db: Session, campaign_id: str, user_id: str) -> Backing | 
     ).first()
 
 
+def prior_purchase(db: Session, campaign_id: str, user_id: str, exclude_order: str | None = None) -> str | None:
+    """A buyer gets one purchase per campaign; paid, refunded or still-settling orders all count."""
+    stmt = select(Order.id).where(
+        Order.campaign_id == campaign_id, Order.buyer_id == user_id,
+        Order.state.in_(("completed", "refunded", "pending_provider")),
+    )
+    if exclude_order:
+        stmt = stmt.where(Order.id != exclude_order)
+    return db.scalars(stmt).first()
+
+
 def create_order(db: Session, user: Profile, campaign_id: str, body: OrderCreate,
                  paypal: PayPalProvider) -> Order:
     settings = get_settings()
@@ -87,6 +99,19 @@ def create_order(db: Session, user: Profile, campaign_id: str, body: OrderCreate
     conn = seller_connection(db, product.id)
     if conn is None or conn.status != "connected" or not conn.merchant_id:
         raise conflict("seller_not_connected", "The builder's PayPal account is not connected")
+
+    if prior_purchase(db, campaign.id, user.id):
+        raise conflict("already_purchased", "You've already bought this. Find your access code under Backings.")
+    # One checkout at a time: a new attempt replaces any unpaid one, of either kind.
+    for previous in db.scalars(
+        select(Order).where(
+            Order.campaign_id == campaign.id, Order.buyer_id == user.id, Order.state == "created",
+        )
+    ).all():
+        previous.state = "cancelled"
+        previous.failure_reason = "superseded"
+        previous.reservation_expires_at = None
+    db.flush()
 
     now = utcnow()
     referrer: Backing | None = None
@@ -107,15 +132,6 @@ def create_order(db: Session, user: Profile, campaign_id: str, body: OrderCreate
     else:
         if _founding_backing(db, campaign.id, user.id):
             raise conflict("already_backed", "You already hold a founding spot for this campaign")
-        for previous in db.scalars(
-            select(Order).where(
-                Order.campaign_id == campaign.id, Order.buyer_id == user.id,
-                Order.kind == "founding", Order.state == "created",
-            )
-        ).all():
-            previous.state = "cancelled"
-            previous.failure_reason = "superseded"
-        db.flush()
         taken = campaign.founding_spots_taken + _active_reservations(db, campaign.id)
         if taken >= campaign.founding_spots_cap:
             raise conflict("sold_out", "All founding spots are taken or reserved",
@@ -301,6 +317,18 @@ def finalize_capture(db: Session, order: Order, result: CaptureResult, *, source
     order.payer_id = result.payer_id
     order.payer_email = result.payer_email
 
+    if db.scalars(select(Order.id).where(
+        Order.campaign_id == campaign.id, Order.buyer_id == buyer.id, Order.id != order.id,
+        Order.state.in_(("completed", "refunded")),
+    )).first():
+        order.state = "pending_provider"
+        order.failure_reason = "duplicate_purchase"
+        raise_flag(db, product_id=product.id, campaign_id=campaign.id, order_id=order.id,
+                   rule="duplicate_purchase", subject_key=f"order:{order.id}", severity="high",
+                   evidence={"source": source, "capture_ref": public_ref("capture", result.capture_id or "")})
+        db.commit()
+        return order
+
     if order.kind == "founding":
         problem = None
         if _founding_backing(db, campaign.id, buyer.id):
@@ -403,6 +431,8 @@ def finalize_capture(db: Session, order: Order, result: CaptureResult, *, source
             "amount_cents": order.amount_cents,
             "currency": order.currency,
             "referral_id": order.referrer_backing_id,
+            "offer": {"type": campaign.offer_type, "value": campaign.offer_value,
+                      "label": offer_label(campaign.offer_type, campaign.offer_value)},
         }, order_id=order.id)
 
     notify_sale(db, order=order, campaign=campaign, product=product, buyer=buyer,

@@ -15,7 +15,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { authedApi, useApi } from "@/hooks/use-api";
 import { ApiError, errorMessage } from "@/lib/api/client";
-import { dollarsToCents, percentToBps } from "@/lib/format";
+import { dollarsToCents, percentToBps, shortDate } from "@/lib/format";
 import type { Campaign, CampaignDraft, OfferSuggestion, Product, Readiness } from "@/lib/api/types";
 import { useAction } from "@/hooks/use-action";
 import {
@@ -23,6 +23,7 @@ import {
   fromCents,
   MoneyField,
   OfferAdvisor,
+  OfferPicker,
   PercentField,
   ReferralExample,
   STORY_MAX,
@@ -30,6 +31,7 @@ import {
   toValues,
   type Values,
 } from "./campaign-fields";
+import { ConfirmDialog } from "./confirm-dialog";
 
 export function CampaignTab({ product, onChange }: { product: Product; onChange: () => void }) {
   const campaign = product.campaign;
@@ -98,7 +100,7 @@ function CampaignForm({ product, campaign, draft, onSaved }: { product: Product;
   );
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-  const locked = campaign?.status === "published";
+  const locked = !!campaign && campaign.status !== "draft";
   const set = (k: keyof Values) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setValues((v) => ({ ...v, [k]: e.target.value }));
 
   async function save(event: React.FormEvent) {
@@ -127,7 +129,7 @@ function CampaignForm({ product, campaign, draft, onSaved }: { product: Product;
       <CardHeader>
         <CardTitle>{campaign ? "Campaign" : "Review the draft"}</CardTitle>
         <CardDescription>
-          {locked ? "Prices are locked while the campaign is live. Copy can still change." : "Everything here is editable. Backers only see it after you publish."}
+          {locked ? "The offer and prices are locked once a campaign goes live. Copy can still change." : "Everything here is editable. Backers only see it after you publish."}
         </CardDescription>
         {draft ? (
           <CardAction>
@@ -209,6 +211,12 @@ function CampaignForm({ product, campaign, draft, onSaved }: { product: Product;
             <FieldSet>
               <FieldLegend>Founding offer</FieldLegend>
               <FieldDescription>Founding backers pay once, get a permanent numbered badge, and a referral link.</FieldDescription>
+              <OfferPicker
+                type={values.offer_type}
+                value={values.offer_value}
+                disabled={locked}
+                onChange={(o) => setValues((v) => ({ ...v, ...o }))}
+              />
               <div className="grid gap-3 sm:grid-cols-2">
                 <MoneyField id="founding_price" label="Price" value={values.founding_price} onChange={set("founding_price")} disabled={locked} />
                 <Field>
@@ -246,8 +254,9 @@ function CampaignForm({ product, campaign, draft, onSaved }: { product: Product;
 }
 
 function ReadinessPanel({ campaign, onPublished }: { campaign: Campaign; onPublished: () => void }) {
-  const { data: readiness, reload: load } = useApi<Readiness>(campaign.status === "published" ? null : `/campaigns/${campaign.id}/readiness`);
+  const { data: readiness, reload: load } = useApi<Readiness>(campaign.status !== "draft" ? null : `/campaigns/${campaign.id}/readiness`);
   const { pending, run } = useAction();
+  const [confirming, setConfirming] = useState(false);
 
   async function publish() {
     try {
@@ -263,6 +272,28 @@ function ReadinessPanel({ campaign, onPublished }: { campaign: Campaign; onPubli
     } catch {}
   }
 
+  async function end() {
+    const ok = await run("end", () => authedApi(`/campaigns/${campaign.id}/end`, { method: "POST" }), "Campaign ended");
+    if (ok) {
+      setConfirming(false);
+      onPublished();
+    }
+  }
+
+  if (campaign.status === "closed") {
+    return (
+      <Card size="sm" className="h-fit xl:sticky xl:top-6">
+        <CardHeader>
+          <CardTitle>Ended</CardTitle>
+          <CardDescription>
+            Closed to new purchases{campaign.ended_at ? ` on ${shortDate(campaign.ended_at)}` : ""}. {campaign.founding_spots_taken} founding{" "}
+            {campaign.founding_spots_taken === 1 ? "backer keeps" : "backers keep"} their access and earned rewards.
+          </CardDescription>
+        </CardHeader>
+      </Card>
+    );
+  }
+
   if (campaign.status === "published") {
     return (
       <Card size="sm" className="h-fit xl:sticky xl:top-6">
@@ -272,6 +303,19 @@ function ReadinessPanel({ campaign, onPublished }: { campaign: Campaign; onPubli
             {campaign.founding_spots_taken} of {campaign.founding_spots_cap} founding spots taken.
           </CardDescription>
         </CardHeader>
+        <CardContent>
+          <ConfirmDialog
+            open={confirming}
+            onOpenChange={setConfirming}
+            trigger={<Button variant="outline" className="w-full">End campaign</Button>}
+            title="End this campaign?"
+            description="Nobody can buy after this, and it can’t be reopened. Current backers keep their access and codes, and rewards they’ve already earned still pay out."
+            confirmLabel="End campaign"
+            destructive
+            pending={pending === "end"}
+            onConfirm={end}
+          />
+        </CardContent>
       </Card>
     );
   }

@@ -121,6 +121,15 @@ def notify_campaign_live(db: Session, *, campaign: Campaign, product: Product, o
     )
 
 
+def notify_campaign_ended(db: Session, *, campaign: Campaign, product: Product, owner: Profile) -> None:
+    notify(
+        db, user=owner, kind="campaign_ended", dedupe_key=f"ended:{campaign.id}",
+        title=f"{product.name}'s campaign has ended",
+        body="New purchases are closed. Your backers keep their access, and rewards they've earned still pay out.",
+        link=f"/app/products/{product.id}?tab=campaign", campaign_id=campaign.id,
+    )
+
+
 def _claim(db: Session, ids: list[str] | None = None, limit: int = 20) -> list[str]:
     now = utcnow()
     query = (
@@ -155,7 +164,12 @@ def _send(db: Session, notification: Notification) -> None:
     notification.email_attempts += 1
     notification.email_lease_until = None
     link = f"{settings.web_base_url.rstrip('/')}{notification.link}" if notification.link else None
-    cta = {"sale": "See your sales", "referral_sale": "See your rewards"}.get(notification.kind, "Open BackIt")
+    cta = {
+        "sale": "See your sales",
+        "referral_sale": "See your rewards",
+        "access_report": "Review the report",
+        "access_report_reply": "See the reply",
+    }.get(notification.kind, "Open BackIt")
     html, text = render(heading=notification.title, body=notification.body, cta_label=cta, cta_url=link)
     try:
         result = send_email(to=notification.email_to or "", subject=notification.title, html=html,
@@ -198,6 +212,12 @@ def send_due_emails(db: Session, ids: list[str] | None = None) -> int:
             notification.email_next_attempt_at = utcnow() + timedelta(minutes=5)
         db.commit()
     return len(claimed)
+
+
+def send_emails_for(db: Session, dedupe_keys: list[str]) -> None:
+    ids = list(db.scalars(select(Notification.id).where(
+        Notification.dedupe_key.in_(dedupe_keys), Notification.email_state == "pending")).all())
+    send_due_emails(db, ids)
 
 
 def send_order_emails(db: Session, order_id: str) -> None:
