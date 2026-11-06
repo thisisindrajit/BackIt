@@ -176,7 +176,7 @@ export default function NewCampaignPage() {
             <Field className="xl:col-span-2">
               <FieldLabel htmlFor="description">What it does</FieldLabel>
               <Textarea id="description" required maxLength={5000} rows={4} value={product.description} onChange={setP("description")} />
-              <FieldDescription>Who it’s for, what it solves, and its regular price if it has one.</FieldDescription>
+              <FieldDescription>Who it’s for, what it solves, and what it costs per month.</FieldDescription>
             </Field>
           </FieldGroup>
         </FormSection>

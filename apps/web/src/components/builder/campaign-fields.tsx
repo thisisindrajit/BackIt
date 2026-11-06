@@ -154,15 +154,27 @@ export function OfferFields({
       </FieldSet>
       <FieldSet>
         <FieldLegend variant="label">Friends they refer</FieldLegend>
-        <FieldDescription>Friends get the same thing through a backer’s link. They pay your regular price minus their discount, and the backer earns a share.</FieldDescription>
+        <FieldDescription>
+          Friends get the same thing through a backer’s link. They pay one month of your regular price minus their discount, once, and the backer earns a share.
+        </FieldDescription>
         <div className="grid gap-3 sm:grid-cols-3">
-          <MoneyField id="referral_list_price" label="Regular price" value={values.referral_list_price} onChange={set("referral_list_price")} disabled={disabled} />
+          <MoneyField
+            id="referral_list_price"
+            label="Regular price"
+            suffix="/month"
+            hint="What it normally costs per month."
+            value={values.referral_list_price}
+            onChange={set("referral_list_price")}
+            disabled={disabled}
+          />
           <PercentField id="referral_discount" label="Friend’s discount" value={values.referral_discount} onChange={set("referral_discount")} disabled={disabled} />
           <PercentField id="commission" label="Backer’s share" value={values.commission} onChange={set("commission")} disabled={disabled} />
         </div>
       </FieldSet>
       <OfferSummary
         reward={reward}
+        type={values.offer_type}
+        periodMonths={Number(values.offer_value)}
         foundingCents={dollarsToCents(values.founding_price)}
         spots={spots}
         listCents={dollarsToCents(values.referral_list_price)}
@@ -262,7 +274,7 @@ export function OfferAdvisor({ listCents, request, onApply }: { listCents: numbe
           <span className="text-sm text-muted-foreground">
             {hasListPrice
               ? "The offer advisor suggests a price, spots, friend’s discount and backer’s share around your regular price."
-              : "Enter your regular price below, and the offer advisor suggests the rest around it."}
+              : "Enter your regular monthly price below, and the offer advisor suggests the rest around it."}
           </span>
         </div>
         <Button type="button" variant="outline" className="shrink-0" onClick={suggest} disabled={!hasListPrice || pending === "suggest"}>
@@ -287,7 +299,7 @@ export function OfferAdvisor({ listCents, request, onApply }: { listCents: numbe
         <SparklesIcon className="size-4" />
         Suggested offer
         <Badge variant="outline">{idea.source === "ai" ? "AI" : "Template"}</Badge>
-        <span className="font-normal text-muted-foreground">for your {money(idea.referral_list_price_cents)} regular price</span>
+        <span className="font-normal text-muted-foreground">for your {money(idea.referral_list_price_cents)}/month regular price</span>
       </div>
       <dl className="flex flex-col divide-y divide-border rounded-md border bg-background text-sm">
         {rows.map(([label, value, reason]) => (
@@ -331,6 +343,8 @@ export const pct = (bps: number) => `${+(bps / 100).toFixed(2)}%`;
 
 function OfferSummary({
   reward,
+  type,
+  periodMonths,
   foundingCents,
   spots,
   listCents,
@@ -339,6 +353,8 @@ function OfferSummary({
   feeBps,
 }: {
   reward: string;
+  type: OfferType;
+  periodMonths: number;
   foundingCents: number;
   spots: number;
   listCents: number;
@@ -352,18 +368,27 @@ function OfferSummary({
   const paid = listCents - applyBps(listCents, discountBps);
   const share = applyBps(paid, commissionBps);
   const kept = paid - share - applyBps(paid, feeBps);
+  const period = Math.round(periodMonths);
+  let perMonth: string | null = null;
+  if (founding && type === "access_period" && period > 0) {
+    perMonth = `That works out to ${money(Math.round(foundingCents / period))}/month.`;
+  } else if (founding && referral && (type === "lifetime" || type === "access_period")) {
+    const n = foundingCents / listCents;
+    perMonth = `That’s the same as ${n < 1 ? "less than 1 month" : `about ${+n.toFixed(1)} ${n === 1 ? "month" : "months"}`} at your ${money(listCents)}/month price.`;
+  }
   return (
     <div className="flex flex-col gap-1.5 rounded-2xl bg-accent/70 px-4 py-3 text-sm text-pretty text-accent-foreground">
       <p className="font-medium">In short</p>
       {founding ? (
         <p>
           Founding backers pay <span className="tabular font-medium">{money(foundingCents)}</span> once for {reward}
-          {Number.isInteger(spots) && spots > 0 ? <>, while <span className="tabular">{spots.toLocaleString()}</span> spots last</> : null}.
+          {Number.isInteger(spots) && spots > 0 ? <>, while <span className="tabular">{spots.toLocaleString()}</span> spots last</> : null}. {perMonth}
         </p>
       ) : null}
       {referral ? (
         <p>
-          A friend they refer pays <span className="tabular font-medium">{money(paid)}</span> for the same thing. Their backer earns{" "}
+          A friend they refer pays <span className="tabular font-medium">{money(paid)}</span> once for the same thing, instead of{" "}
+          <span className="tabular">{money(listCents)}</span>/month. Their backer earns{" "}
           <span className="tabular font-medium">{money(share)}</span>, and you keep <span className="tabular font-medium">{money(kept)}</span> after BackIt’s{" "}
           {pct(feeBps)} fee, before PayPal fees.
         </p>
@@ -372,7 +397,21 @@ function OfferSummary({
   );
 }
 
-export function MoneyField({ id, label, hint, ...props }: { id: string; label: string; hint?: string; value: string; onChange: React.ChangeEventHandler<HTMLInputElement>; disabled?: boolean }) {
+export function MoneyField({
+  id,
+  label,
+  hint,
+  suffix,
+  ...props
+}: {
+  id: string;
+  label: string;
+  hint?: string;
+  suffix?: string;
+  value: string;
+  onChange: React.ChangeEventHandler<HTMLInputElement>;
+  disabled?: boolean;
+}) {
   return (
     <Field>
       <FieldLabel htmlFor={id}>{label}</FieldLabel>
@@ -381,6 +420,11 @@ export function MoneyField({ id, label, hint, ...props }: { id: string; label: s
           <InputGroupText>$</InputGroupText>
         </InputGroupAddon>
         <InputGroupInput id={id} inputMode="decimal" required {...props} />
+        {suffix ? (
+          <InputGroupAddon align="inline-end">
+            <InputGroupText>{suffix}</InputGroupText>
+          </InputGroupAddon>
+        ) : null}
       </InputGroup>
       {hint ? <FieldDescription>{hint}</FieldDescription> : null}
     </Field>

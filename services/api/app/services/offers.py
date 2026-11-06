@@ -139,7 +139,7 @@ def suggest_offer(db: Session, user: Profile, product: Product | ProductFacts, n
         "reward": _reward(offer_type, offer_value),
         "access_details": product.access_terms,
         "builder_notes": (notes or "")[:3000],
-        "list_price": format_usd(list_price),
+        "list_price_per_month": format_usd(list_price),
         "average_monthly_revenue": format_usd(mrr) if mrr is not None else "unknown",
         "current_offer": current,
         "platform_fee_percent": fee_bps / 100,
@@ -149,7 +149,7 @@ def suggest_offer(db: Session, user: Profile, product: Product | ProductFacts, n
     out, source, _ = ai.generate(
         db,
         purpose="offer_advice",
-        prompt_version="offer_advice.v5",
+        prompt_version="offer_advice.v6",
         actor_id=user.id,
         system=(
             "You are a pricing advisor for indie software builders running a founding-backer campaign on BackIt. "
@@ -160,13 +160,15 @@ def suggest_offer(db: Session, user: Profile, product: Product | ProductFacts, n
             "and the backer earns a commission on what the friend pays. "
             "Suggest terms that reward early backers, give friends a real reason to buy, "
             "make sharing worthwhile, and still leave the builder most of each sale. "
-            "The builder set the list price: the full one-time price a referred friend pays before their discount. "
+            "The builder set the list price: what the product normally costs per month. A referred friend pays "
+            "one month's list price minus their discount, once, for the reward. "
             "It is fixed; build the offer around it and never suggest a different one. "
             "The founding price must be below the list price. All prices are integer cents, percentages are "
             "basis points (2000 = 20%). Each reason is one short sentence in plain words for the builder; "
             "only mention dollar amounts that are part of your suggestion or the list price. Never refer to "
             "the input fields (no 'notes' or 'facts'); talk about the product and its price directly. "
-            "In the reasons, call the list price the 'regular price' and the commission the 'backer's share'."
+            "In the reasons, call the list price the 'regular price' and write it per month (for example "
+            "'$29/month'), and call the commission the 'backer's share'."
         ),
         user=json.dumps(facts, default=str),
         schema=_Idea,

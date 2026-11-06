@@ -66,7 +66,8 @@ export function BuyPanel({ campaign: c, referralCode, signedIn }: { campaign: Pu
       <CardContent>
         <p className="flex items-baseline gap-2">
           <span className="tabular font-heading text-5xl">{money(c.referral.price_cents)}</span>
-          <span className="tabular text-muted-foreground line-through">{money(c.referral.list_price_cents)}</span>
+          <span className="text-sm text-muted-foreground">once</span>
+          <span className="tabular text-muted-foreground line-through">{money(c.referral.list_price_cents)}/month</span>
         </p>
       </CardContent>
       <CardFooter>
@@ -94,6 +95,7 @@ export function BuyPanel({ campaign: c, referralCode, signedIn }: { campaign: Pu
       <CardContent className="flex flex-col gap-4">
         <p className="flex items-baseline gap-2">
           <span className="tabular font-heading text-5xl">{money(c.founding.price_cents)}</span>
+          <span className="text-sm text-muted-foreground">once</span>
           {!soldOut && !ended ? <span className="tabular text-sm text-muted-foreground">badge No. {c.founding.spots_taken + 1} is next</span> : null}
         </p>
         <div className="flex flex-col gap-2">
