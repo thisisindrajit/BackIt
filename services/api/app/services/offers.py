@@ -149,7 +149,7 @@ def suggest_offer(db: Session, user: Profile, product: Product | ProductFacts, n
     out, source, _ = ai.generate(
         db,
         purpose="offer_advice",
-        prompt_version="offer_advice.v4",
+        prompt_version="offer_advice.v5",
         actor_id=user.id,
         system=(
             "You are a pricing advisor for indie software builders running a founding-backer campaign on BackIt. "
@@ -165,7 +165,8 @@ def suggest_offer(db: Session, user: Profile, product: Product | ProductFacts, n
             "The founding price must be below the list price. All prices are integer cents, percentages are "
             "basis points (2000 = 20%). Each reason is one short sentence in plain words for the builder; "
             "only mention dollar amounts that are part of your suggestion or the list price. Never refer to "
-            "the input fields (no 'notes' or 'facts'); talk about the product and its price directly."
+            "the input fields (no 'notes' or 'facts'); talk about the product and its price directly. "
+            "In the reasons, call the list price the 'regular price' and the commission the 'backer's share'."
         ),
         user=json.dumps(facts, default=str),
         schema=_Idea,
