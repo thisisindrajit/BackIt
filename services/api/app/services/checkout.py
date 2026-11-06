@@ -4,13 +4,13 @@ import re
 import secrets
 from datetime import timedelta
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.errors import AppError, forbidden, not_found
 from app.ids import new_id, utcnow
-from app.models import Backing, Campaign, Commission, Order, Product, Profile
+from app.models import AccessReport, Backing, Campaign, Commission, Order, Product, Profile
 from app.money import quote_founding, quote_referral
 from app.offer_types import offer_label
 from app.presenters import seller_connection
@@ -84,6 +84,34 @@ def prior_purchase(db: Session, campaign_id: str, user_id: str, exclude_order: s
     return db.scalars(stmt).first()
 
 
+DEMO_BACKER_EMAIL = "backer@demo.backit.club"
+
+
+def retire_demo_purchase(db: Session, campaign_id: str, user: Profile) -> None:
+    """Judges share one demo backer, so a repeat purchase hands the earlier one to an archive profile.
+
+    The sale, badge and ledger history stay intact; only ownership moves.
+    """
+    archive = Profile(
+        id=new_id("demo"), email=f"backer+{secrets.token_hex(4)}@demo.backit.club",
+        display_name=user.display_name,
+    )
+    db.add(archive)
+    db.flush()
+    backing_ids = list(db.scalars(
+        select(Backing.id).where(Backing.campaign_id == campaign_id, Backing.user_id == user.id)
+    ))
+    db.execute(update(Backing).where(Backing.id.in_(backing_ids)).values(user_id=archive.id))
+    db.execute(update(AccessReport).where(AccessReport.backing_id.in_(backing_ids)).values(reporter_id=archive.id))
+    db.execute(
+        update(Order).where(Order.campaign_id == campaign_id, Order.buyer_id == user.id, Order.state != "created")
+        .values(buyer_id=archive.id)
+    )
+    audit(db, actor_id=user.id, action="demo.purchase_retired", target_type="campaign", target_id=campaign_id,
+          details={"archive_profile": archive.id, "backings": backing_ids})
+    db.flush()
+
+
 def create_order(db: Session, user: Profile, campaign_id: str, body: OrderCreate,
                  paypal: PayPalProvider) -> Order:
     settings = get_settings()
@@ -100,6 +128,8 @@ def create_order(db: Session, user: Profile, campaign_id: str, body: OrderCreate
     if conn is None or conn.status != "connected" or not conn.merchant_id:
         raise conflict("seller_not_connected", "The builder's PayPal account is not connected")
 
+    if prior_purchase(db, campaign.id, user.id) and user.email.lower() == DEMO_BACKER_EMAIL:
+        retire_demo_purchase(db, campaign.id, user)
     if prior_purchase(db, campaign.id, user.id):
         raise conflict("already_purchased", "You've already bought this. Find your access code under Backings.")
     # One checkout at a time: a new attempt replaces any unpaid one, of either kind.

@@ -53,6 +53,19 @@ def test_same_buyer_cannot_buy_twice(client, campaign, buy, auth) -> None:
         assert r.status_code == 409 and r.json()["error"]["code"] == "already_purchased"
 
 
+def test_demo_backer_can_buy_again(client, campaign, buy, auth, db) -> None:
+    cid = campaign["campaign"]["id"]
+    first = buy(cid, "demo", email="backer@demo.backit.club")
+    second = buy(cid, "demo", email="backer@demo.backit.club")
+    assert first["backing"]["badge_number"] == 1 and second["backing"]["badge_number"] == 2
+    db.expire_all()
+    old = db.scalars(select(Backing).where(Backing.badge_number == 1)).one()
+    assert old.user_id != "demo"
+    assert db.get(Order, first["id"]).buyer_id == old.user_id
+    r = client.get("/v1/me/backings", headers=auth("demo", "backer@demo.backit.club"))
+    assert [b["badge_number"] for b in r.json()] == [2]
+
+
 def test_second_unpaid_checkout_replaces_the_first(client, campaign, buy, auth, db) -> None:
     cid = campaign["campaign"]["id"]
     alice = buy(cid, "alice")
