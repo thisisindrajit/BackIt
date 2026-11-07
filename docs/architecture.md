@@ -174,7 +174,7 @@ commission  = round_half_up(amount × commission_bps / 10000)
 platform_fee= round_half_up(amount × 800 / 10000)        # 8%
 ```
 
-The **AI offer advisor** suggests the founding price, spots, discount and commission, and explains why. It also projects what the builder keeps. The builder can still change every number.
+The **AI offer advisor** suggests the founding price, spots, discount and commission, and explains why. It also projects what the builder keeps. The builder can still change every number. The founding price stays a little below what a referred friend pays for the same access (75–95% of it), so founding members get the best deal and the friend link is still worth using.
 
 ---
 

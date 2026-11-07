@@ -87,8 +87,9 @@ def test_offer_suggestion_template_is_valid(client, campaign) -> None:
     s = r.json()
     assert s["source"] == "template"
     assert s["referral_list_price_cents"] == OFFER["referral_list_price_cents"]
-    assert s["referral_months"] == 12 and s["founding_price_cents"] == 80900  # lifetime: about 8 months
+    assert s["referral_months"] == 12 and s["founding_price_cents"] == 81900  # lifetime: a little below a friend's $960
     p = s["projection"]
+    assert p["friend_pays_cents"] * 0.75 <= s["founding_price_cents"] < p["friend_pays_cents"]
     assert p["friend_pays_cents"] == 96000 and p["backer_earns_cents"] == 24000
     assert p["referral_keep_cents"] == 96000 - 24000 - 7680
     assert p["all_spots_keep_cents"] == p["founding_keep_cents"] * s["founding_spots_cap"]
@@ -103,7 +104,7 @@ def test_offer_suggestion_keeps_the_builders_list_price(client, auth) -> None:
     }).json()
     url = f"/v1/products/{product['id']}/offer-suggestion"
     s = client.post(url, headers=h, json={"notes": "Pro is $12/month", "list_price_cents": 7900}).json()
-    assert s["referral_list_price_cents"] == 7900 and s["founding_price_cents"] == 63900
+    assert s["referral_list_price_cents"] == 7900 and s["founding_price_cents"] == 64900
     assert "list_price" not in s["reasons"]
     coupon = client.post(url, headers=h, json={"list_price_cents": 7900, "offer_type": "discount", "offer_value": 40})
     assert coupon.status_code == 200 and coupon.json()["referral_list_price_cents"] == 7900
@@ -111,6 +112,8 @@ def test_offer_suggestion_keeps_the_builders_list_price(client, auth) -> None:
                                                "offer_type": "access_period", "offer_value": 12}).json()
     assert period["referral_months"] == 6 and period["founding_price_cents"] < 1200 * 12
     assert period["projection"]["friend_pays_cents"] == 1200 * 6 * 8 // 10
+    friend_for_12 = 1200 * 12 * 8 // 10  # what a friend would pay for the same 12 months
+    assert friend_for_12 * 0.75 <= period["founding_price_cents"] < friend_for_12
     assert client.post(url, headers=h, json={"notes": "Pro is $79"}).status_code == 422
     r = client.post(url, headers=h, json={"list_price_cents": 100, "offer_type": "access_period", "offer_value": 1})
     assert r.status_code == 422 and r.json()["error"]["code"] == "list_price_too_low"

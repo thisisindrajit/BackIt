@@ -46,6 +46,8 @@ OFFER = {
     "referral_discount_bps": 2000,
     "commission_bps": 2500,
 }
+# Ledgerly follows the offer advisor's rule: founding price a little below the $115.20 a friend pays.
+LEDGERLY_OFFER = {**OFFER, "founding_price_cents": 9900}
 VERIFIED_MONTHS = [180000, 150000, 130000]
 FIRST_NAMES = ["Ava", "Noah", "Mira", "Kai", "Lena", "Omar", "Zoe", "Ravi", "Iris", "Theo",
                "Nina", "Arjun", "Ella", "Sami", "Priya", "Jonas", "Maya", "Leo", "Tara", "Ben"]
@@ -171,13 +173,14 @@ class Seeder:
         return self.call("POST", "/products", h, fields)
 
     def campaign(self, h: dict[str, str], product: dict[str, Any], slug: str, headline: str,
-                 summary: str, story: str, publish: bool = True) -> dict[str, Any]:
+                 summary: str, story: str, publish: bool = True,
+                 offer: dict[str, int] = OFFER) -> dict[str, Any]:
         pid = product["id"]
         if publish:
             self.call("POST", f"/products/{pid}/paypal/onboarding", h)
             self.call("POST", f"/products/{pid}/verification/demo", h, {"months": VERIFIED_MONTHS})
         cmp = self.call("POST", "/campaigns", h, {"product_id": pid, "slug": slug, "headline": headline,
-                                                  "summary": summary, "story": story, **OFFER})
+                                                  "summary": summary, "story": story, **offer})
         return self.call("POST", f"/campaigns/{cmp['id']}/publish", h) if publish else cmp
 
     def buy(self, campaign_id: str, h: dict[str, str], code: str | None = None) -> dict[str, Any]:
@@ -269,7 +272,7 @@ def seed(owner: Profile) -> None:
             me, ledgerly, "ledgerly", "Back Ledgerly and never dread tax season again",
             "Founding backers get lifetime Pro for a one-time price and earn a reward for every "
             "friend who buys.",
-            LEDGERLY_STORY)
+            LEDGERLY_STORY, offer=LEDGERLY_OFFER)
         codes = [s.buy(lc["id"], s.backer(n))["backing"]["referral_code"] for n in range(1, 13)]
         # Early referrals clear the hold and get paid out; later ones stay on hold.
         for n, code in zip(range(13, 17), [codes[0], codes[0], codes[2], codes[4]], strict=True):
