@@ -3,7 +3,7 @@
 **Turn your product's first fans into your best salespeople.**
 
 - 🌐 **Live site:** [backit.club](https://backit.club)
-- 🎬 **Demo video:** [Watch on YouTube](https://www.youtube.com/watch?v=4Yl6HftLVOI)
+- 🎬 **Demo video:** [Watch on YouTube](https://youtu.be/go6VxW3apTs)
 - 🏗️ **Architecture:** [docs/architecture.md](docs/architecture.md)
 
 ---
