@@ -1,9 +1,9 @@
-# 🌱 BackIt
+# BackIt
 
 **Turn your product's first fans into your best salespeople.**
 
-🌐 **Live site:** [backit.club](https://backit.club)
-🎬 **Demo video:** [Watch on YouTube](https://www.youtube.com/watch?v=lSgo9OTiL-g)
+- 🌐 **Live site:** [backit.club](https://backit.club)
+- 🎬 **Demo video:** [Watch on YouTube](https://www.youtube.com/watch?v=lSgo9OTiL-g)
 
 ---
 
