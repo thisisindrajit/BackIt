@@ -1,11 +1,14 @@
-# BackIt API
+# ⚡ BackIt API
 
-FastAPI backend for BackIt: founding-backer campaigns with referral commissions on PayPal.
-The HTTP contract is in [`docs/api-contract.md`](../../docs/api-contract.md); every route lives under `/v1`.
+The FastAPI backend behind BackIt. It owns every rule about money: pricing, checkout, refunds, 30-day holds, payouts, risk checks and the public ledger. A worker handles the slow, retryable jobs.
 
-## Local setup
+- 📜 **API contract:** [`docs/api-contract.md`](../../docs/api-contract.md). Every route lives under `/v1`.
+- 🏗️ **Architecture and diagrams:** [`docs/architecture.md`](../../docs/architecture.md)
+- 🌍 **Live:** `https://api.backit.club`
 
-Requirements: uv, and a local Postgres 16 with database `backit` and schemas `app` (BackIt) and `auth` (Better Auth). BackIt never touches `auth`.
+## 🚀 Local setup
+
+You need uv, and a local Postgres 16 with database `backit` and schemas `app` (BackIt) and `auth` (Better Auth). BackIt never touches `auth`.
 
 ```bash
 cd services/api
@@ -18,7 +21,7 @@ uv run python -m app.workers.run --loop   # second terminal: outbox, webhooks, p
 
 `python -m app.workers.run --once` drains one round of work and exits.
 
-### Demo data
+### 🌱 Demo data
 
 Sign in to the web app once, then seed through the real API flows (PayPal mock, development only):
 
@@ -26,9 +29,16 @@ Sign in to the web app once, then seed through the real API flows (PayPal mock, 
 uv run python scripts/seed_demo.py --owner-email you@example.com          # --reset wipes app data first
 ```
 
-You get Ledgerly (live, with sales, a refund, a paid payout and held rewards), Shipnote (draft) and Pagecraft (no campaign), plus backings in two `demo_*` builders' campaigns. Seeded activity is spread over the past ten weeks so the dashboard chart has history; run `uv run python scripts/seed_demo.py --backdate` to do that for data seeded before this existed.
+You get:
 
-## Tests and lint
+- 📒 **Ledgerly**: live, with sales, a refund, a paid payout and held rewards
+- 📝 **Shipnote**: a draft campaign
+- 🧱 **Pagecraft**: no campaign yet
+- 🏅 Backings in two `demo_*` builders' campaigns
+
+Seeded activity is spread over the past ten weeks so the dashboard chart has history; run `uv run python scripts/seed_demo.py --backdate` to do that for data seeded before this existed.
+
+## 🧪 Tests and lint
 
 ```bash
 createdb backit_test          # once; tests recreate the app schema via Alembic
@@ -39,13 +49,13 @@ uv run ruff check .
 Tests sign their own EdDSA JWTs through a dependency override and capture outgoing webhooks, so no network access is needed.
 Set `TEST_DB_SERVER`, `TEST_DB_USERNAME`, `TEST_DB_PASSWORD` or `TEST_DB_NAME` to use a different test database.
 
-## Modes
+## 🎛️ Modes
 
-- **PayPal** — `PAYPAL_MODE=mock` (default) runs checkout, refunds, onboarding and payouts locally. Mock IDs are prefixed `MOCK` and `provider` is `"mock"`. `PAYPAL_MODE=sandbox` with `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET` and `PAYPAL_WEBHOOK_ID` uses `https://api-m.sandbox.paypal.com`: Orders v2 with `platform_fees` and builder `payee.merchant_id`, Partner Referrals, webhook signature verification, and Payouts. Live endpoints are never called.
-- **AI** — with `OPENROUTER_API_KEY`, campaign drafts, share drafts and payout explanations call OpenRouter with JSON-schema output. Output is validated with Pydantic. On any failure the response falls back to a template (`source: "template"`). AI never computes money.
-- **Mock PayPal webhooks** — in development only, `POST /v1/webhooks/paypal` accepts events with the header `paypal-transmission-sig: mock`.
+- 💙 **PayPal:** `PAYPAL_MODE=mock` (default) runs checkout, refunds, onboarding and payouts locally. Mock IDs are prefixed `MOCK` and `provider` is `"mock"`. `PAYPAL_MODE=sandbox` with `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET` and `PAYPAL_WEBHOOK_ID` uses `https://api-m.sandbox.paypal.com`: Orders v2 with `platform_fees` and builder `payee.merchant_id`, Partner Referrals, webhook signature verification, and Payouts. Live endpoints are never called.
+- 🤖 **AI:** with `OPENROUTER_API_KEY`, campaign drafts, the offer advisor, share drafts, payout explanations and the payout risk review call OpenRouter with JSON-schema output. Output is validated with Pydantic. On any failure the response falls back to a template (`source: "template"`). AI never computes or moves money, and it can only raise a risk level, never lower it.
+- 🪝 **Mock PayPal webhooks:** in development only, `POST /v1/webhooks/paypal` accepts events with the header `paypal-transmission-sig: mock`.
 
-### Local PayPal sandbox
+### 🏖️ Local PayPal sandbox
 
 Create a **Platform** app in PayPal's sandbox Apps & Credentials. Enable Payouts,
 onboarding before payment, and platform fees. Keep its client ID and secret in the
@@ -69,7 +79,7 @@ and **Connect PayPal** to onboard a sandbox seller, then **Refresh status** afte
 returning to its Setup tab. Use a separate sandbox Personal account as the buyer.
 Do not use mock orders to test sandbox refunds or payouts.
 
-## Layout
+## 📁 Layout
 
 ```
 app/main.py          app factory, CORS, request-id middleware, error envelope
@@ -78,14 +88,16 @@ app/auth.py          Better Auth JWT (JWKS) verification + profile upsert
 app/models.py        SQLAlchemy models + DB constraints (schema "app")
 app/money.py         integer-cents pricing, half-up rounding
 app/routers/         HTTP routes (/v1/...)
-app/services/        checkout/finalize, refunds, payouts, risk, ledger, sharing, provider events
+app/services/        checkout/finalize, refunds, payouts, risk + AI risk review, ledger, offers,
+                     campaigns, sharing, claims, notifications, access reports, provider events
 app/providers/       paypal.py (mock + sandbox), ai.py (OpenRouter + template)
 app/webhooks_out.py  builder webhooks: HMAC signing, SSRF guard, delivery
-app/workers/run.py   worker: outbox jobs, deliveries, inbox, payouts, holds, order expiry
+app/email.py         notification emails through Resend (skipped without RESEND_API_KEY)
+app/workers/run.py   worker: order expiry, holds, PayPal inbox, outbox jobs, deliveries, emails
 migrations/          Alembic
 ```
 
-## Docker
+## 🐳 Docker
 
 ```bash
 docker build -t backit-api .
@@ -94,16 +106,16 @@ docker run --env-file .env backit-api python -m app.workers.run --loop    # work
 docker run --env-file .env backit-api alembic upgrade head                # migrations
 ```
 
-## Production (Google Cloud Run)
+## ☁️ Production (Google Cloud Run)
 
 Project `backit-512304`, region `us-central1`. `.gcloudignore` keeps `.env` out of the build upload.
 
 - **API:** Cloud Run service `backit-api`, mapped to `https://api.backit.club` (CNAME `api` → `ghs.googlehosted.com.`).
 - **Worker:** Cloud Run job `backit-worker` (`python -m app.workers.run --once`), triggered every minute by Cloud Scheduler job `backit-worker-every-minute`.
-- **Secrets (Secret Manager):** `db-username`, `db-password`, `app-encryption-key`, `paypal-client-id`, `paypal-client-secret`, `paypal-webhook-id`, `openrouter-api-key` (campaign drafts fall back to a template without it).
+- **Secrets (Secret Manager):** `db-username`, `db-password`, `app-encryption-key`, `paypal-client-id`, `paypal-client-secret`, `paypal-webhook-id`, `openrouter-api-key` (AI features fall back to templates without it).
 - **PayPal webhook:** `https://api.backit.club/v1/webhooks/paypal` on the sandbox app.
 
-Redeploy after code changes:
+🔁 Redeploy after code changes:
 
 ```bash
 gcloud run deploy backit-api --source . --region us-central1 --project backit-512304

@@ -4,6 +4,7 @@
 
 - 🌐 **Live site:** [backit.club](https://backit.club)
 - 🎬 **Demo video:** [Watch on YouTube](https://www.youtube.com/watch?v=lSgo9OTiL-g)
+- 🏗️ **Architecture:** [docs/architecture.md](docs/architecture.md)
 
 ---
 
@@ -41,15 +42,32 @@ To recreate the demo accounts on another database: `DEMO_BUILDER_PASSWORD=… DE
 - 💙 **PayPal** Checkout and PayPal Payouts for money in and money out
 - 🤖 **AI** for offer suggestions, campaign writing and payout previews
 
+## 🏗️ How it works under the hood
+
+```mermaid
+flowchart LR
+    U([🙋 People]) --> W[🌐 Next.js web<br/>Vercel]
+    W -- JWT --> A[⚡ FastAPI API<br/>Cloud Run]
+    A --> D[(🗄️ Postgres)]
+    K[⏱️ Worker<br/>every minute] --> D
+    A <--> P[💙 PayPal]
+    K <--> P
+    A --> AI[🤖 OpenRouter]
+    K -- signed webhooks --> B[🧩 Builder's app]
+```
+
+The web app is the face, the API owns every money rule, the worker handles retries and payouts, and PayPal moves the cash. 👉 The full story, with sequence and state diagrams, is in **[docs/architecture.md](docs/architecture.md)**.
+
 ## 📁 Repository
 
 | Path | What |
 |---|---|
-| `apps/web` | Next.js 16 app with shadcn/ui, Tailwind v4, and Better Auth (JWT). Contains the builder workspace, backer pages, public campaign and checkout. |
-| `services/api` | FastAPI API and worker (outbox, webhooks, holds, payouts). See [its README](services/api/README.md). |
-| `examples/demo-product` | A stand-in builder product that receives signed BackIt webhooks and grants or revokes access. |
-| `docs/api-contract.md` | The HTTP contract, which is the source of truth for both sides. |
-| `PRODUCT.md`, `DESIGN.md` | Product context and design system. |
+| `apps/web` | 🌐 Next.js 16 app with shadcn/ui, Tailwind v4, and Better Auth (JWT). See [its README](apps/web/README.md). |
+| `services/api` | ⚡ FastAPI API and worker (outbox, webhooks, holds, payouts). See [its README](services/api/README.md). |
+| `examples/demo-product` | 🧩 "Ledgerly", a stand-in builder product that receives signed webhooks. See [its README](examples/demo-product/README.md). |
+| `docs/architecture.md` | 🏗️ How everything fits together, with diagrams. |
+| `docs/api-contract.md` | 📜 The HTTP contract, which is the source of truth for both sides. |
+| `PRODUCT.md`, `DESIGN.md` | 🎨 Product context and design system. |
 
 ## ✅ Prerequisites
 
@@ -132,6 +150,9 @@ The defaults run in mock mode. Set these for sandbox and production paths:
 | `DB_SERVER`, `DB_USERNAME`, `DB_PASSWORD`, `DB_NAME` | `services/api/.env` and `apps/web/.env.local` | Shared Postgres for app data and auth (`DB_SERVER` is `host` or `host:port`) |
 | `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL` | `apps/web/.env.local` | Auth |
 | `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_DEMO_PRODUCT_URL` | `apps/web/.env.local` | API and demo product URLs |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | `apps/web/.env.local` | Google sign-in |
+| `FONTS_BASE_URL`, `BLOB_READ_WRITE_TOKEN` | Vercel | Downloads the licensed fonts at build time |
+| `RESEND_API_KEY`, `EMAIL_FROM` | `services/api/.env` | Notification emails. Without a key, emails are skipped. |
 
 ## 🧹 Checks
 
