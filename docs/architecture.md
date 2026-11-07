@@ -174,7 +174,7 @@ commission  = round_half_up(amount × commission_bps / 10000)
 platform_fee= round_half_up(amount × 800 / 10000)        # 8%
 ```
 
-The **AI offer advisor** suggests the founding price, spots, discount and commission, and explains why. It also projects what the builder keeps. The builder can still change every number. The founding price stays a little below what a referred friend pays for the same access (75–95% of it), so founding members get the best deal and the friend link is still worth using.
+The **AI offer advisor** suggests the founding price, spots, discount and commission, and explains why. It also projects what the builder keeps. The builder can still change every number. For lifetime offers, the founding price is a little more than a referred friend pays up front (105–150% of it), so the friend link is the cheaper way in and founding is the better long-term deal. For a set number of months, founding costs a little less per month than a friend pays (75–95%).
 
 ---
 

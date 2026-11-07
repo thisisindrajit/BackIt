@@ -87,9 +87,9 @@ def test_offer_suggestion_template_is_valid(client, campaign) -> None:
     s = r.json()
     assert s["source"] == "template"
     assert s["referral_list_price_cents"] == OFFER["referral_list_price_cents"]
-    assert s["referral_months"] == 12 and s["founding_price_cents"] == 81900  # lifetime: a little below a friend's $960
+    assert s["referral_months"] == 12 and s["founding_price_cents"] == 120900  # just above a friend's $960
     p = s["projection"]
-    assert p["friend_pays_cents"] * 0.75 <= s["founding_price_cents"] < p["friend_pays_cents"]
+    assert p["friend_pays_cents"] * 1.05 <= s["founding_price_cents"] <= p["friend_pays_cents"] * 1.5
     assert p["friend_pays_cents"] == 96000 and p["backer_earns_cents"] == 24000
     assert p["referral_keep_cents"] == 96000 - 24000 - 7680
     assert p["all_spots_keep_cents"] == p["founding_keep_cents"] * s["founding_spots_cap"]
@@ -104,7 +104,7 @@ def test_offer_suggestion_keeps_the_builders_list_price(client, auth) -> None:
     }).json()
     url = f"/v1/products/{product['id']}/offer-suggestion"
     s = client.post(url, headers=h, json={"notes": "Pro is $12/month", "list_price_cents": 7900}).json()
-    assert s["referral_list_price_cents"] == 7900 and s["founding_price_cents"] == 64900
+    assert s["referral_list_price_cents"] == 7900 and s["founding_price_cents"] == 94900
     assert "list_price" not in s["reasons"]
     coupon = client.post(url, headers=h, json={"list_price_cents": 7900, "offer_type": "discount", "offer_value": 40})
     assert coupon.status_code == 200 and coupon.json()["referral_list_price_cents"] == 7900
@@ -135,7 +135,7 @@ def test_one_step_new_campaign(client, auth, db) -> None:
     offer = {k: idea[k] for k in ("founding_price_cents", "founding_spots_cap", "referral_list_price_cents",
                                   "referral_months", "referral_discount_bps", "commission_bps")}
     draft = client.post("/v1/products/campaign-draft", headers=h, json={"product": facts, "offer": offer}).json()
-    assert f"${offer['founding_price_cents'] // 100}" in draft["story"] and draft["missing_evidence"] == []
+    assert f"${offer['founding_price_cents'] // 100:,}" in draft["story"] and draft["missing_evidence"] == []
     assert draft["founding_price_cents"] == offer["founding_price_cents"]
 
     campaign = {"slug": "shipnote", "headline": draft["headline"], "summary": draft["summary"],

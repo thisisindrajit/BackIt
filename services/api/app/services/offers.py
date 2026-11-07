@@ -78,26 +78,36 @@ def _reward(offer_type: str, value: int | None) -> str:
     return "lifetime access"
 
 
-# Founding members should get the best deal, but only a little better than a referred friend, so the
-# friend link stays worth using. Their price sits in this band of what a friend pays for the same access.
-FOUNDING_BAND = (0.75, 0.95)
-FOUNDING_TARGET = 0.85
+# Lifetime founding spots cost a little more up front than a friend's prepaid months, so the friend link
+# is the cheaper way in while founding still wins long term.
+LIFETIME_BAND = (1.05, 1.5)
+LIFETIME_TARGET = 1.25
+# A set number of founding months should cost a little less per month than a friend pays.
+PERIOD_BAND = (0.75, 0.95)
+PERIOD_TARGET = 0.85
 
 
-def _friend_benchmark(offer_type: str, offer_value: int | None, friend_pays: int, referral_months: int) -> int | None:
-    """What a friend pays for access comparable to the founding reward, or None when they don't compare."""
+def _founding_band(offer_type: str, offer_value: int | None, friend_pays: int,
+                   referral_months: int) -> tuple[int, int, float] | None:
+    """(low, high, target multiple) for the founding price, or None when the reward doesn't compare."""
     if offer_type == "lifetime":
-        return friend_pays
+        lo, hi = LIFETIME_BAND
+        return round(friend_pays * lo), round(friend_pays * hi), LIFETIME_TARGET
     if offer_type == "access_period" and offer_value:
-        return round(friend_pays * offer_value / referral_months)
+        bench = round(friend_pays * offer_value / referral_months)
+        return round(bench * PERIOD_BAND[0]), bench - 1, PERIOD_TARGET
     return None
 
 
-def _below(benchmark: int) -> int:
-    """A charm price around FOUNDING_TARGET of the benchmark, always below it."""
-    price = _charm(round(benchmark * FOUNDING_TARGET))
-    if price >= benchmark:
-        price = max(100, round(benchmark * FOUNDING_TARGET) // 100 * 100)
+def _in_band(friend_pays: int, band: tuple[int, int, float], offer_type: str, offer_value: int | None,
+             referral_months: int) -> int:
+    """A charm price near the band's target, falling back to whole dollars if the charm leaves the band."""
+    lo, hi, target = band
+    base = friend_pays if offer_type == "lifetime" else round(friend_pays * (offer_value or 1) / referral_months)
+    want = round(base * target)
+    price = _charm(want)
+    if not lo <= price <= hi:
+        price = max(100, want // 100 * 100)
     return price
 
 
@@ -143,9 +153,9 @@ def suggest_offer(db: Session, user: Profile, product: Product | ProductFacts, n
         if not valid(offer | fixed):
             offer |= {"referral_discount_bps": 1000, "commission_bps": 1000}
         friend_pays = projection(offer | fixed, fee_bps).friend_pays_cents
-        bench = _friend_benchmark(offer_type, offer_value, friend_pays, referral_months)
-        if bench is not None:
-            founding = _below(bench)
+        band = _founding_band(offer_type, offer_value, friend_pays, referral_months)
+        if band is not None:
+            founding = _in_band(friend_pays, band, offer_type, offer_value, referral_months)
         else:
             founding = min(max(_charm(_founding_multiple(offer_type, offer_value, list_price)), 100), 1_000_000)
         if ceiling is not None and founding >= ceiling:
@@ -155,8 +165,12 @@ def suggest_offer(db: Session, user: Profile, product: Product | ProductFacts, n
             raise AppError(422, "list_price_too_low", "Set a higher regular monthly price to get a suggestion.")
         return _Idea(
             **offer,
-            founding_price_reason=("A little less than a friend pays, so founding members get the best deal "
-                                   "and the friend link still feels worth it."),
+            founding_price_reason=(
+                "A little more than a friend pays up front, so the friend link is the cheaper way in "
+                "while founding members still get the best deal long term."
+                if offer_type == "lifetime" else
+                "A little less per month than a friend pays, so founding members get the best deal "
+                "and the friend link still feels worth it."),
             spots_reason="100 spots is scarce enough to feel founding, and enough to fund real progress.",
             discount_reason=f"20% off {referral_months} prepaid months gives friends a real reason to buy.",
             commission_reason="25% of what the friend pays makes sharing worth it for backers.",
@@ -169,9 +183,9 @@ def suggest_offer(db: Session, user: Profile, product: Product | ProductFacts, n
         if ceiling is not None and o.founding_price_cents >= ceiling:
             raise ValueError("founding price must be below paying monthly for the same period")
         p = projection(offer, fee_bps)
-        bench = _friend_benchmark(offer_type, offer_value, p.friend_pays_cents, referral_months)
-        if bench is not None and not (bench * FOUNDING_BAND[0] <= o.founding_price_cents < bench):
-            raise ValueError("founding price must be a little below what a friend pays for the same access")
+        band = _founding_band(offer_type, offer_value, p.friend_pays_cents, referral_months)
+        if band is not None and not band[0] <= o.founding_price_cents <= band[1]:
+            raise ValueError("founding price is outside the band around what a friend pays")
         allowed = {*offer.values(), *p.model_dump().values(), list_price, list_total, *stated,
                    list_total - p.friend_pays_cents}
         if ceiling is not None:
@@ -202,7 +216,7 @@ def suggest_offer(db: Session, user: Profile, product: Product | ProductFacts, n
     out, source, _ = ai.generate(
         db,
         purpose="offer_advice",
-        prompt_version="offer_advice.v7",
+        prompt_version="offer_advice.v8",
         actor_id=user.id,
         system=(
             "You are a pricing advisor for indie software builders running a founding-backer campaign on BackIt. "
@@ -214,10 +228,10 @@ def suggest_offer(db: Session, user: Profile, product: Product | ProductFacts, n
             "prepay `friends_prepay_months` months of the regular plan once, minus a discount, and the backer "
             "earns a commission on what the friend pays. Suggest a founding price, spots, friend discount and "
             "commission that reward early backers, give friends a real reason to buy, make sharing worthwhile, "
-            "and still leave the builder most of each sale. Founding members get the best deal, but only a "
-            "little better than a friend's: for lifetime access, the founding price should be about 75-95% of "
-            "what a friend pays after their discount; for a set number of months, about 75-95% of what a friend "
-            "pays for that many months. Much cheaper, and nobody would use the friend link. "
+            "and still leave the builder most of each sale. The friend link should be the cheaper way in, and "
+            "founding the better long-term deal: for lifetime access, the founding price should be about "
+            "105-150% of what a friend pays after their discount; for a set number of months, about 75-95% of "
+            "what a friend pays for that many months. Price founding too low and nobody uses the friend link. "
             "All prices are integer cents, percentages are basis points (2000 = 20%). "
             "Each reason is one short sentence in plain words for "
             "the builder; only mention dollar amounts that are part of your suggestion, the monthly price, or "

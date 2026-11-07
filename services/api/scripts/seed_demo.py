@@ -46,8 +46,8 @@ OFFER = {
     "referral_discount_bps": 2000,
     "commission_bps": 2500,
 }
-# Ledgerly follows the offer advisor's rule: founding price a little below the $115.20 a friend pays.
-LEDGERLY_OFFER = {**OFFER, "founding_price_cents": 9900}
+# Ledgerly demo: a friend pays $76.80 for 8 months, a bit less than the $99 lifetime founding spot.
+LEDGERLY_OFFER = {**OFFER, "founding_price_cents": 9900, "referral_months": 8}
 VERIFIED_MONTHS = [180000, 150000, 130000]
 FIRST_NAMES = ["Ava", "Noah", "Mira", "Kai", "Lena", "Omar", "Zoe", "Ravi", "Iris", "Theo",
                "Nina", "Arjun", "Ella", "Sami", "Priya", "Jonas", "Maya", "Leo", "Tara", "Ben"]
