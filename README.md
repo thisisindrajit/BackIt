@@ -1,24 +1,47 @@
-# BackIt
+# 🌱 BackIt
 
-**backit.club** lets builders run founding-backer campaigns. Backers pre-buy through PayPal checkout, get a permanent founding badge and a referral link, and earn commissions on referred sales. BackIt notifies the builder's app by signed webhook so product access is real. An AI agent drafts campaign copy, share posts, and payout previews, and a human approves every payout.
+**Turn your product's first fans into your best salespeople.**
 
-Backing is a purchase, not an investment. There is no equity and no revenue share.
+🌐 **Live site:** [backit.club](https://backit.club)
+🎬 **Demo video:** [Watch on YouTube](https://www.youtube.com/watch?v=lSgo9OTiL-g)
 
-## Testing BackIt (for judges)
+---
 
-Everything runs live on the PayPal **sandbox**, so no real money moves. The demo credentials (two BackIt accounts and a PayPal sandbox buyer) are in the hackathon submission. You can also sign in with your own Google account.
+## 💡 What is BackIt?
 
-1. **Back the product.** Open [backit.club/ledgerly](https://backit.club/ledgerly), choose **Claim a founding spot**, and sign in with the demo **backer** account (Sign in → *Use a demo account*).
-2. **Pay.** Use the PayPal button and log in with the sandbox buyer. Confetti means the payment was captured.
-3. **Unlock the product.** Copy the access code from the success screen, open [test-app.backit.club](https://test-app.backit.club) (Ledgerly, a fake app with a paywall), and redeem it to unlock Pro. BackIt sends the purchase to Ledgerly over a signed webhook.
-4. **Share.** On your backing in the dashboard, copy your referral link. Open it in a private window and buy with another account (your Google account or the builder account) to see the referral discount. The first backer earns a commission.
-5. **See the builder side.** Sign out, then sign in with the demo **builder** account. You'll see sales, the notification bell, campaign stats, the AI risk review and payout explanations, payouts, and refunds.
+You built something people love, but getting your first paying customers is hard. Ads cost too much 💸 and big discounts eat your profit 📉.
 
-Ledgerly has 500 founding spots, so there is plenty of room to test.
+BackIt fixes that by letting your earliest fans help you grow:
 
-To recreate the demo accounts on another database: `DEMO_BUILDER_PASSWORD=… DEMO_BACKER_PASSWORD=… node --env-file=.env.local scripts/create-demo-users.mjs` (run it from `apps/web`). Email/password sign-up is turned off in the app; only these seeded accounts can sign in that way.
+- 🏷️ **You set up a founding offer.** AI helps you pick a fair price and writes your campaign page.
+- 🙌 **Fans back it early.** They pay once with PayPal, get a special founding price and a numbered badge.
+- 🔗 **They share it with friends.** Friends get a discount, and the backer earns a reward for every sale.
+- 💰 **Backers get paid.** An AI agent prepares the payouts, you approve them, and PayPal Payouts sends the money.
 
-## Repository
+> 🙅 Backing is a purchase, not an investment. There's no equity and no revenue share.
+
+## 🧪 Try it yourself (for judges)
+
+Everything runs on the PayPal **sandbox**, so no real money moves. The demo logins (two BackIt accounts and a PayPal sandbox buyer) are in the hackathon submission. You can also sign in with your own Google account.
+
+1. 🛒 **Back a product.** Open [backit.club/ledgerly](https://backit.club/ledgerly), click **Claim a founding spot**, and sign in with the demo **backer** account (Sign in → *Use a demo account*).
+2. 💳 **Pay with PayPal.** Log in with the sandbox buyer. Confetti 🎉 means the payment went through.
+3. 🔓 **Unlock the product.** Copy the access code from the success screen, open [test-app.backit.club](https://test-app.backit.club) (Ledgerly, a pretend app with a paywall), and paste it in to unlock Pro.
+4. 📣 **Share your link.** In your dashboard, copy your referral link. Open it in a private window and buy with another account to see the friend discount. The first backer earns a reward.
+5. 📊 **See the builder side.** Sign out and sign in with the demo **builder** account to see sales, notifications, campaign stats, payouts and refunds.
+
+Ledgerly has 500 founding spots, so there's plenty of room to play around. 😄
+
+To recreate the demo accounts on another database: `DEMO_BUILDER_PASSWORD=… DEMO_BACKER_PASSWORD=… node --env-file=.env.local scripts/create-demo-users.mjs` (run it from `apps/web`). Email/password sign-up is turned off; only these seeded accounts can sign in that way.
+
+## 🛠️ Built with
+
+- ⚛️ **Next.js 16**, shadcn/ui and Tailwind for the web app
+- ⚡ **FastAPI** and Postgres for the API
+- 💙 **PayPal** Checkout and PayPal Payouts for money in and money out
+- 🤖 **AI** for offer suggestions, campaign writing and payout previews
+
+## 📁 Repository
 
 | Path | What |
 |---|---|
@@ -28,14 +51,14 @@ To recreate the demo accounts on another database: `DEMO_BUILDER_PASSWORD=… DE
 | `docs/api-contract.md` | The HTTP contract, which is the source of truth for both sides. |
 | `PRODUCT.md`, `DESIGN.md` | Product context and design system. |
 
-## Prerequisites
+## ✅ Prerequisites
 
 - Postgres 16
 - [uv](https://docs.astral.sh/uv/)
 - Node 24
 - The Timeless fonts (`TimelessSerifVF.ttf`, `TimelessSerifItalicVF.ttf`, `TimelessSansVF.ttf`). Their license forbids public repos, so they are gitignored. Locally, copy them into `apps/web/src/fonts/`. On Vercel, `npm run build` runs `scripts/fetch-fonts.mjs` first, which downloads any missing font from a private Vercel Blob store using `FONTS_BASE_URL` and `BLOB_READ_WRITE_TOKEN`.
 
-## Local setup
+## 🚀 Local setup
 
 ```bash
 # 1. Database
@@ -60,7 +83,7 @@ npx @better-auth/cli@latest migrate --config src/lib/auth.ts -y
 npm run dev                                          # http://localhost:3000
 ```
 
-### Google sign-in
+### 🔑 Google sign-in
 
 Sign-in and sign-up use Google only. To create the keys:
 
@@ -70,7 +93,7 @@ Sign-in and sign-up use Google only. To create the keys:
 
 The first Google sign-in creates the account, using the Google name and email.
 
-### Demo product (terminal 4)
+### 🧩 Demo product (terminal 4)
 
 The demo product verifies webhook signatures, so it needs the secret that BackIt shows **once** when you create a product. Follow this order:
 
@@ -85,7 +108,7 @@ The demo product verifies webhook signatures, so it needs the secret that BackIt
 
 `BACKIT_PRODUCT_ID` (and `BACKIT_API_URL`, default `http://localhost:8001`) let `/demo` redeem backers' one-time access codes. See [Access claim codes](docs/api-contract.md#access-claim-codes).
 
-## Mock walkthrough
+## 🎭 Mock walkthrough
 
 With `PAYPAL_MODE=mock`, the whole loop runs locally. Every mock ID is prefixed `MOCK` and labelled in the UI.
 
@@ -96,7 +119,7 @@ With `PAYPAL_MODE=mock`, the whole loop runs locally. Every mock ID is prefixed 
 5. **Refund:** refund a sale in **Sales**. The demo product revokes access, the code stops working, and the commission is reversed.
 6. **Payout:** the backer sets a payout email in Settings. In development, use **Skip hold (demo)** on Payouts. Then create a preview, review the agent summary and exclusions, and approve.
 
-## Environment
+## ⚙️ Environment
 
 The defaults run in mock mode. Set these for sandbox and production paths:
 
@@ -110,7 +133,7 @@ The defaults run in mock mode. Set these for sandbox and production paths:
 | `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL` | `apps/web/.env.local` | Auth |
 | `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_DEMO_PRODUCT_URL` | `apps/web/.env.local` | API and demo product URLs |
 
-## Checks
+## 🧹 Checks
 
 ```bash
 cd services/api && uv run pytest && uv run ruff check .
