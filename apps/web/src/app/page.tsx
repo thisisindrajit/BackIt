@@ -11,7 +11,7 @@ import { LedgerTicker } from "@/components/landing/ledger-ticker";
 const perks = [
   "A numbered founding backer badge",
   "Your own link to share with friends",
-  "$20 for every friend who buys with it",
+  "$19.20 for every friend who buys with it",
 ];
 
 const roles = [
@@ -113,24 +113,25 @@ const faqs = [
   },
 ];
 
-// Worked example: a $100 product, $60 founding price, 20% friend discount, 25% reward, 8% BackIt fee.
+// Worked example: a $12/month product, $99 lifetime founding spot, friends prepay 8 months at 20% off,
+// 25% backer reward, 8% BackIt fee.
 const examples = [
   {
     title: "An early fan buys a founding spot",
     rows: [
-      { label: "They pay", value: "$60" },
-      { label: "BackIt (8%)", value: "$4.80" },
+      { label: "They pay once, for life", value: "$99" },
+      { label: "BackIt (8%)", value: "$7.92" },
     ],
-    total: { label: "You get", value: "$55.20" },
+    total: { label: "You get", value: "$91.08" },
   },
   {
     title: "A friend buys with their link",
     rows: [
-      { label: "Friend pays (20% off)", value: "$80" },
-      { label: "Your backer’s reward", value: "$20" },
-      { label: "BackIt (8%)", value: "$6.40" },
+      { label: "Friend pays (8 months, 20% off)", value: "$76.80" },
+      { label: "Your backer’s reward (25%)", value: "$19.20" },
+      { label: "BackIt (8%)", value: "$6.14" },
     ],
-    total: { label: "You get", value: "$53.60" },
+    total: { label: "You get", value: "$51.46" },
   },
 ];
 
@@ -169,9 +170,8 @@ export default function Home() {
                 <p className="text-sm text-muted-foreground">Be one of the first 50 people to back Ledgerly.</p>
               </div>
               <div className="flex items-baseline gap-2">
-                <span className="tabular font-heading text-4xl">$60</span>
-                <span className="tabular text-muted-foreground line-through">$100</span>
-                <span className="text-sm text-muted-foreground">founding price</span>
+                <span className="tabular font-heading text-4xl">$99</span>
+                <span className="text-sm text-muted-foreground">once · lifetime access</span>
               </div>
               <div className="flex flex-col gap-2.5">
                 <span className="text-sm font-medium">What you get</span>
@@ -288,7 +288,8 @@ export default function Home() {
                 Free to start. <em>8% when you sell.</em>
               </h2>
               <p className="max-w-xl text-lg text-muted-foreground">
-                Here’s an example. Say your product is $100, you offer founding spots at $60, and friends get 20% off.
+                Here’s an example. Say your product is $12 a month. Founding backers pay $99 once for lifetime access, and
+                friends prepay 8 months at 20% off. Founding costs a bit more up front, but it’s the best deal long term.
               </p>
             </div>
 
